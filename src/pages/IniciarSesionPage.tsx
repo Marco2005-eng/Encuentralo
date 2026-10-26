@@ -24,7 +24,6 @@ export const IniciarSesionPage: React.FC = () => {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -55,11 +54,6 @@ export const IniciarSesionPage: React.FC = () => {
     } finally {
       setCargandoGoogle(false);
     }
-  };
-
-  const usarCuentaDemo = (correo: string, pass: string) => {
-    setValue('correo', correo, { shouldValidate: true });
-    setValue('contrasena', pass, { shouldValidate: true });
   };
 
   return (
@@ -160,31 +154,6 @@ export const IniciarSesionPage: React.FC = () => {
             Regístrate aquí
           </Link>
         </p>
-
-        {/* Cuentas Demo Rápidas */}
-        <div className="mt-8 pt-6 border-t border-slate-100">
-          <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider text-center">
-            Cuentas de demostración
-          </p>
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => usarCuentaDemo('admin@encuentralo.test', 'Admin123!')}
-              className="text-left text-xs p-2 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 flex justify-between"
-            >
-              <span>👤 <strong>Admin:</strong> admin@encuentralo.test</span>
-              <span className="text-brand-600 font-semibold">Usar</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => usarCuentaDemo('ana@encuentralo.test', 'Usuario123!')}
-              className="text-left text-xs p-2 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 flex justify-between"
-            >
-              <span>👤 <strong>Usuario:</strong> ana@encuentralo.test</span>
-              <span className="text-brand-600 font-semibold">Usar</span>
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
