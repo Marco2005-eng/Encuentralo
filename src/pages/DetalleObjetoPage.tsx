@@ -28,12 +28,13 @@ import {
   Trash2,
   Upload,
   X,
+  PackageCheck,
 } from 'lucide-react';
 
 export const DetalleObjetoPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { usuario } = useAuth();
+  const { usuario, estaSuspendido } = useAuth();
   const { mostrarToast } = useToast();
 
   const [objeto, setObjeto] = useState<Objeto | null>(null);
@@ -82,7 +83,12 @@ export const DetalleObjetoPage: React.FC = () => {
         imagenPrueba || undefined
       );
       setSolicitudActiva(nueva);
-      mostrarToast('¡Solicitud de recuperación enviada exitosamente!', 'exito');
+      mostrarToast(
+        objeto.tipo === 'perdido'
+          ? '¡Aviso de hallazgo enviado al dueño con éxito!'
+          : '¡Solicitud de recuperación enviada exitosamente!',
+        'exito'
+      );
       setModalAbierto(false);
       setImagenPrueba(null);
       reset();
@@ -178,10 +184,10 @@ export const DetalleObjetoPage: React.FC = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 card p-6 sm:p-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 card p-4 sm:p-6 md:p-8">
         {/* Imagen o Placeholder */}
         <div className="flex flex-col gap-3">
-          <div className="w-full h-80 sm:h-96 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden">
+          <div className="w-full h-64 sm:h-80 md:h-96 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden">
             {objeto.imagen ? (
               <img
                 src={objeto.imagen}
@@ -259,64 +265,106 @@ export const DetalleObjetoPage: React.FC = () => {
               <div className="p-4 bg-amber-50 text-amber-900 border border-amber-200 rounded-xl space-y-1">
                 <div className="flex items-center gap-2 font-bold text-sm">
                   <Clock className="w-4 h-4 text-amber-600" />
-                  Tienes una solicitud enviada ({solicitudActiva.estado})
+                  {objeto.tipo === 'perdido'
+                    ? `Aviso de hallazgo enviado (${solicitudActiva.estado})`
+                    : `Tienes una solicitud enviada (${solicitudActiva.estado})`}
                 </div>
                 <p className="text-xs text-amber-800">
-                  El responsable está verificando la información que proporcionaste. Te notificaremos cualquier cambio.
+                  {objeto.tipo === 'perdido'
+                    ? 'Has avisado al dueño que encontraste su objeto. Cuando lo confirme, coordinarán la entrega.'
+                    : 'El responsable está verificando la información que proporcionaste. Te notificaremos cualquier cambio.'}
                 </p>
               </div>
             ) : !usuario ? (
               <Link to="/iniciar-sesion" state={{ from: { pathname: `/objetos/${objeto.id}` } }}>
-                <Button variant="primary" className="w-full">
-                  Iniciar sesión para solicitar recuperación
+                <Button
+                  variant="primary"
+                  className={`w-full ${objeto.tipo === 'perdido' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
+                >
+                  {objeto.tipo === 'perdido'
+                    ? 'Iniciar sesión para avisar que lo encontraste'
+                    : 'Iniciar sesión para solicitar recuperación'}
                 </Button>
               </Link>
+            ) : estaSuspendido ? (
+              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-center text-xs text-rose-800">
+                <p className="font-bold">Acción restringida</p>
+                <p className="mt-0.5">Tu cuenta tiene una suspensión temporal por infracciones a las normas.</p>
+              </div>
             ) : (
               <Button
                 variant="primary"
                 size="lg"
-                className="w-full shadow-md"
+                className={`w-full shadow-md gap-2 font-bold ${
+                  objeto.tipo === 'perdido' ? 'bg-emerald-600 hover:bg-emerald-700' : ''
+                }`}
                 onClick={() => setModalAbierto(true)}
               >
-                Solicitar recuperación de este objeto
+                {objeto.tipo === 'perdido' ? (
+                  <>
+                    <PackageCheck className="w-5 h-5" />
+                    <span>¡Lo encontré! / Tengo este objeto</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-5 h-5" />
+                    <span>Solicitar recuperación de este objeto</span>
+                  </>
+                )}
               </Button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Modal de Solicitud de Pertenencia (IHC 7.5) */}
+      {/* Modal de Solicitud de Pertenencia o Aviso de Hallazgo (IHC 7.5) */}
       <Modal
         abierto={modalAbierto}
         alCerrar={() => setModalAbierto(false)}
-        titulo="Acreditar que el objeto es tuyo"
+        titulo={
+          objeto.tipo === 'perdido'
+            ? 'Avisar al dueño que encontraste su objeto'
+            : 'Acreditar que el objeto es tuyo'
+        }
       >
         <form onSubmit={handleSubmit(handleEnviarSolicitud)} className="space-y-4">
           <div className="flex items-start gap-2.5 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-900">
             <HelpCircle className="w-4 h-4 text-brand-600 shrink-0 mt-0.5" />
             <p>
-              Para evitar fraudes y proteger al propietario original, describe detalles específicos (rayones, contenido de bolsillos, pegatinas, fondo de pantalla, marcas distintivas).
+              {objeto.tipo === 'perdido'
+                ? 'El autor publicó este reporte porque perdió su objeto en el campus. Indícale dónde lo encontraste o dónde lo has dejado (ej: Oficina de Objetos Perdidos UCSS, recepción de pabellón o contigo) para coordinar la devolución.'
+                : 'Para evitar fraudes y proteger al propietario original, describe detalles específicos (rayones, contenido de bolsillos, pegatinas, fondo de pantalla, marcas distintivas).'}
             </p>
           </div>
 
           <Textarea
-            label="Detalles de pertenencia"
+            label={
+              objeto.tipo === 'perdido'
+                ? 'Detalles del hallazgo y ubicación actual'
+                : 'Detalles de pertenencia'
+            }
             rows={4}
-            placeholder="Ejemplo: La mochila tiene una mancha azul pequeña en la correa derecha y dentro guardaba una libreta con espiral rojo..."
+            placeholder={
+              objeto.tipo === 'perdido'
+                ? 'Ejemplo: Lo encontré en el pabellón 100 aula 102 debajo de una carpeta. Ya lo dejé en la recepción del pabellón / Lo tengo en mi mochila y podemos encontrarnos en el comedor...'
+                : 'Ejemplo: La mochila tiene una mancha azul pequeña en la correa derecha y dentro guardaba una libreta con espiral rojo...'
+            }
             required
             error={errors.pruebaPertenencia?.message}
             ayuda="Mínimo 20 caracteres. Sé lo más preciso posible."
             {...register('pruebaPertenencia')}
           />
 
-          {/* Subir foto de prueba de pertenencia */}
+          {/* Subir foto de prueba de pertenencia / hallazgo */}
           <div className="space-y-1.5 text-left">
             <label className="text-xs font-semibold text-slate-700">
-              Fotografía de comprobación (Opcional)
+              {objeto.tipo === 'perdido'
+                ? 'Foto del objeto que encontraste (Opcional)'
+                : 'Fotografía de comprobación (Opcional)'}
             </label>
             {imagenPrueba ? (
               <div className="relative inline-block border rounded-xl overflow-hidden bg-slate-100 max-h-40">
-                <img src={imagenPrueba} alt="Foto de prueba de pertenencia" className="max-h-40 object-contain" />
+                <img src={imagenPrueba} alt="Foto adjunta" className="max-h-40 object-contain" />
                 <button
                   type="button"
                   onClick={() => setImagenPrueba(null)}
@@ -330,7 +378,11 @@ export const DetalleObjetoPage: React.FC = () => {
               <label className="flex flex-col items-center justify-center p-3 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
                 <Upload className="w-5 h-5 text-slate-400 mb-1" />
                 <span className="text-xs font-medium text-slate-600">
-                  {subiendoFotoPrueba ? 'Cargando...' : 'Adjuntar foto (ej. boleta, foto previa usando el objeto)'}
+                  {subiendoFotoPrueba
+                    ? 'Cargando...'
+                    : objeto.tipo === 'perdido'
+                    ? 'Adjuntar foto del objeto encontrado'
+                    : 'Adjuntar foto (ej. boleta, foto previa usando el objeto)'}
                 </span>
                 <input
                   type="file"
@@ -342,7 +394,9 @@ export const DetalleObjetoPage: React.FC = () => {
               </label>
             )}
             <p className="text-[11px] text-slate-400">
-              Si tienes una foto previa con el objeto o comprobante de compra, puedes adjuntarla para una verificación inmediata.
+              {objeto.tipo === 'perdido'
+                ? 'Una foto permite al dueño confirmar al instante que se trata del objeto que está buscando.'
+                : 'Si tienes una foto previa con el objeto o comprobante de compra, puedes adjuntarla para una verificación inmediata.'}
             </p>
           </div>
 
@@ -350,8 +404,13 @@ export const DetalleObjetoPage: React.FC = () => {
             <Button type="button" variant="outline" onClick={() => setModalAbierto(false)}>
               Cancelar
             </Button>
-            <Button type="submit" variant="primary" cargando={isSubmitting}>
-              Enviar solicitud
+            <Button
+              type="submit"
+              variant="primary"
+              cargando={isSubmitting}
+              className={objeto.tipo === 'perdido' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+            >
+              {objeto.tipo === 'perdido' ? 'Enviar aviso al dueño' : 'Enviar solicitud'}
             </Button>
           </div>
         </form>

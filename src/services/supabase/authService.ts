@@ -181,6 +181,8 @@ export const supabaseAuthService: AuthService = {
       let rolReal: 'usuario' | 'admin' = (user.user_metadata?.rol as 'usuario' | 'admin') || 'usuario';
       let telefonoReal = user.user_metadata?.telefono || undefined;
       let nombreReal = user.user_metadata?.nombre || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario';
+      let baneadoHastaReal: string | null = null;
+      let motivoBaneoReal: string | null = null;
 
       try {
         const perfilRes = await fetch(`${SUPABASE_URL}/rest/v1/perfiles?id=eq.${user.id}&select=*`, {
@@ -192,6 +194,8 @@ export const supabaseAuthService: AuthService = {
             if (perfiles[0].rol) rolReal = perfiles[0].rol;
             if (perfiles[0].nombre) nombreReal = perfiles[0].nombre;
             if (perfiles[0].telefono) telefonoReal = perfiles[0].telefono;
+            if (perfiles[0].baneado_hasta) baneadoHastaReal = perfiles[0].baneado_hasta;
+            if (perfiles[0].motivo_baneo) motivoBaneoReal = perfiles[0].motivo_baneo;
           }
         }
       } catch {
@@ -205,6 +209,8 @@ export const supabaseAuthService: AuthService = {
         telefono: telefonoReal,
         rol: rolReal,
         creadoEn: user.created_at || new Date().toISOString(),
+        baneadoHasta: baneadoHastaReal,
+        motivoBaneo: motivoBaneoReal,
       };
     } catch {
       return null;
@@ -274,5 +280,54 @@ export const supabaseAuthService: AuthService = {
     if (!res.ok) {
       throw new Error(data.msg || data.error_description || 'No se pudo asignar la contraseña.');
     }
+  },
+
+  async listarUsuarios(admin: Usuario): Promise<Usuario[]> {
+    if (admin.rol !== 'admin') throw new Error('Acceso restringido.');
+    const sesion = obtenerSesionLocal();
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/perfiles?order=creado_en.desc&select=*`, {
+      headers: getAuthHeaders(sesion?.access_token),
+    });
+    if (!res.ok) return [];
+    const perfiles = await res.json();
+    return perfiles.map((p: any) => ({
+      id: p.id,
+      nombre: p.nombre,
+      correo: p.correo,
+      telefono: p.telefono || undefined,
+      rol: p.rol || 'usuario',
+      creadoEn: p.creado_en,
+      baneadoHasta: p.baneado_hasta || null,
+      motivoBaneo: p.motivo_baneo || null,
+    }));
+  },
+
+  async suspenderUsuario(usuarioId: string, dias: number, motivo: string, admin: Usuario): Promise<void> {
+    if (admin.rol !== 'admin') throw new Error('Acceso restringido.');
+    const sesion = obtenerSesionLocal();
+    const fechaFin = new Date();
+    fechaFin.setDate(fechaFin.getDate() + dias);
+
+    await fetch(`${SUPABASE_URL}/rest/v1/perfiles?id=eq.${usuarioId}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(sesion?.access_token),
+      body: JSON.stringify({
+        baneado_hasta: fechaFin.toISOString(),
+        motivo_baneo: motivo.trim(),
+      }),
+    });
+  },
+
+  async quitarSuspension(usuarioId: string, admin: Usuario): Promise<void> {
+    if (admin.rol !== 'admin') throw new Error('Acceso restringido.');
+    const sesion = obtenerSesionLocal();
+    await fetch(`${SUPABASE_URL}/rest/v1/perfiles?id=eq.${usuarioId}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(sesion?.access_token),
+      body: JSON.stringify({
+        baneado_hasta: null,
+        motivo_baneo: null,
+      }),
+    });
   },
 };

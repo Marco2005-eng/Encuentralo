@@ -1,5 +1,6 @@
 import type { NotificacionesService } from '@/services/types';
-import { escribir, latencia, leer } from './storage';
+import type { Notificacion } from '@/types/models';
+import { escribir, latencia, leer, nuevoId, ahora } from './storage';
 import { inicializarStorageSiVacio } from './objetosService';
 
 export const notificacionesService: NotificacionesService = {
@@ -21,5 +22,21 @@ export const notificacionesService: NotificacionesService = {
       return n;
     });
     escribir('notificaciones', actualizadas);
+  },
+
+  async crear(usuarioId, mensaje, enlace) {
+    await latencia(30);
+    inicializarStorageSiVacio();
+    const notificaciones = leer('notificaciones') || [];
+    const nueva: Notificacion = {
+      id: nuevoId(),
+      usuarioId,
+      mensaje,
+      leida: false,
+      enlace,
+      creadoEn: ahora(),
+    };
+    escribir('notificaciones', [nueva, ...notificaciones]);
+    return nueva;
   },
 };

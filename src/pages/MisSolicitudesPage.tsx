@@ -9,17 +9,16 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { CardSkeleton } from '@/components/ui/Skeleton';
-import { Modal } from '@/components/ui/Modal';
-import { ChatEntrega } from '@/components/objetos/ChatEntrega';
+import { useChat } from '@/context/ChatContext';
 import { Inbox, ExternalLink, XCircle, Phone, MessageCircle } from 'lucide-react';
 
 export const MisSolicitudesPage: React.FC = () => {
   const { usuario } = useAuth();
   const { mostrarToast } = useToast();
+  const { abrirChat } = useChat();
 
   const [solicitudes, setSolicitudes] = useState<SolicitudConObjeto[]>([]);
   const [cargando, setCargando] = useState(true);
-  const [chatSolicitud, setChatSolicitud] = useState<{ id: string; nombreObjeto: string } | null>(null);
 
   const cargarSolicitudes = async () => {
     if (!usuario) return;
@@ -109,17 +108,17 @@ export const MisSolicitudesPage: React.FC = () => {
                     </p>
                   )}
                   {s.estado === 'aprobada' && s.publicadorTelefono && (
-                    <div className="mt-2 p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between gap-2 text-emerald-900">
-                      <span className="flex items-center gap-1.5 font-semibold">
-                        <Phone className="w-3.5 h-3.5 text-emerald-700" /> Contacto del responsable: {s.publicadorTelefono}
+                    <div className="mt-2 p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-emerald-900">
+                      <span className="flex items-center gap-1.5 font-semibold text-xs">
+                        <Phone className="w-3.5 h-3.5 text-emerald-700 shrink-0" /> Contacto del responsable: {s.publicadorTelefono}
                       </span>
                       <a
                         href={`https://wa.me/${s.publicadorTelefono.replace(/\D/g, '')}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 text-white font-bold text-[11px] hover:bg-emerald-700"
+                        className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-md bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 self-start sm:self-auto"
                       >
-                        <MessageCircle className="w-3 h-3" /> WhatsApp
+                        <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
                       </a>
                     </div>
                   )}
@@ -127,17 +126,12 @@ export const MisSolicitudesPage: React.FC = () => {
               </div>
 
               {/* Botones de acción según estado */}
-              <div className="shrink-0 flex items-center justify-end gap-2">
+              <div className="shrink-0 flex flex-wrap items-center justify-end gap-2 pt-2 sm:pt-0">
                 {s.estado === 'aprobada' && (
                   <Button
                     variant="primary"
                     size="sm"
-                    onClick={() =>
-                      setChatSolicitud({
-                        id: s.id,
-                        nombreObjeto: s.objeto?.nombre || 'Objeto',
-                      })
-                    }
+                    onClick={() => abrirChat(s.id, s.objeto?.nombre || 'Objeto')}
                     className="gap-1.5 text-xs font-semibold shadow-xs"
                   >
                     <MessageCircle className="w-3.5 h-3.5" /> Coordinar Entrega
@@ -159,21 +153,6 @@ export const MisSolicitudesPage: React.FC = () => {
           ))}
         </div>
       )}
-
-      {/* Modal Chat de Entrega */}
-      <Modal
-        abierto={Boolean(chatSolicitud)}
-        alCerrar={() => setChatSolicitud(null)}
-        titulo="Coordinar entrega del objeto"
-      >
-        {chatSolicitud && usuario && (
-          <ChatEntrega
-            solicitudId={chatSolicitud.id}
-            nombreObjeto={chatSolicitud.nombreObjeto}
-            usuarioActualId={usuario.id}
-          />
-        )}
-      </Modal>
     </div>
   );
 };

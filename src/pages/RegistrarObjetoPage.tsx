@@ -11,11 +11,15 @@ export const RegistrarObjetoPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const tipoQuery = searchParams.get('tipo') as TipoReporte | null;
-  const { usuario } = useAuth();
+  const { usuario, estaSuspendido } = useAuth();
   const { mostrarToast } = useToast();
 
   const handleCrear = async (valores: ObjetoValues) => {
     if (!usuario) return;
+    if (estaSuspendido) {
+      mostrarToast('Tu cuenta se encuentra suspendida temporalmente.', 'error');
+      return;
+    }
     try {
       const nuevo = await services.objetos.crear(valores, usuario.id);
       mostrarToast('¡Objeto publicado con éxito!', 'exito');

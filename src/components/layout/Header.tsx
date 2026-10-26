@@ -14,15 +14,20 @@ import {
   ShieldCheck,
   LogOut,
   User,
+  MessageCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useChat } from '@/context/ChatContext';
 
 export const Header: React.FC = () => {
   const { usuario, cerrarSesion } = useAuth();
+  const { abrirChat } = useChat();
   const navigate = useNavigate();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [campanaAbierta, setCampanaAbierta] = useState(false);
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
+  const [panelChatAbierto, setPanelChatAbierto] = useState(false);
+  const [chatsActivos, setChatsActivos] = useState<{ id: string; titulo: string }[]>([]);
 
   const cargarNotificaciones = async () => {
     if (!usuario) return;
@@ -34,8 +39,63 @@ export const Header: React.FC = () => {
     }
   };
 
+  const cargarChatsActivos = async () => {
+    if (!usuario) return;
+    try {
+      // Obtener solicitudes aprobadas donde el usuario sea solicitante o dueño del objeto
+      const [comoSol, misPubs] = await Promise.all([
+        services.solicitudes.delSolicitante(usuario.id),
+        services.objetos.delUsuario(usuario.id),
+      ]);
+
+      const listaChats: { id: string; titulo: string }[] = [];
+
+      // 1. Solicitudes que envié y fueron aprobadas
+      comoSol
+        .filter((s) => s.estado === 'aprobada')
+        .forEach((s) => {
+          listaChats.push({
+            id: s.id,
+            titulo: s.objeto?.nombre || 'Objeto reclamado',
+          });
+        });
+
+      // 2. Solicitudes recibidas en mis publicaciones que aprobé
+      for (const pub of misPubs) {
+        if (pub.estado === 'recuperado' || pub.estado === 'en_proceso') {
+          const sols = await services.solicitudes.delObjeto(pub.id, usuario);
+          sols
+            .filter((s) => s.estado === 'aprobada')
+            .forEach((s) => {
+              if (!listaChats.some((c) => c.id === s.id)) {
+                listaChats.push({
+                  id: s.id,
+                  titulo: pub.nombre,
+                });
+              }
+            });
+        }
+      }
+
+      setChatsActivos(listaChats);
+    } catch {
+      // Ignorar
+    }
+  };
+
   useEffect(() => {
     cargarNotificaciones();
+    cargarChatsActivos();
+
+    if (!usuario) return;
+
+    // Sondeo en tiempo real para notificaciones y chats activos (IHC Visibilidad)
+    const interval = setInterval(() => {
+      cargarNotificaciones();
+      cargarChatsActivos();
+    }, 3500);
+
+    return () => clearInterval(interval);
   }, [usuario]);
 
   const noLeidas = notificaciones.filter((n) => !n.leida).length;
@@ -46,6 +106,18 @@ export const Header: React.FC = () => {
       setNotificaciones((prev) => prev.map((n) => ({ ...n, leida: true })));
     }
     setCampanaAbierta(!campanaAbierta);
+    if (!campanaAbierta) {
+      setPanelChatAbierto(false);
+      setMenuAbierto(false);
+    }
+  };
+
+  const togglePanelChat = () => {
+    setPanelChatAbierto(!panelChatAbierto);
+    if (!panelChatAbierto) {
+      setCampanaAbierta(false);
+      setMenuAbierto(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -108,6 +180,69 @@ export const Header: React.FC = () => {
                   Publicar objeto
                 </Button>
               </Link>
+
+              {/* Atajo Rápido: Chats de Entrega */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={togglePanelChat}
+                  aria-expanded={panelChatAbierto}
+                  aria-label={`Chats de entrega (${chatsActivos.length} activos)`}
+                  title="Chats de coordinación de entrega"
+                  className="relative p-2 text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  {chatsActivos.length > 0 && (
+                    <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold text-white ring-2 ring-white">
+                      {chatsActivos.length}
+                    </span>
+                  )}
+                </button>
+
+                {panelChatAbierto && (
+                  <div className="absolute right-0 mt-2 w-80 rounded-2xl bg-white p-3 shadow-xl ring-1 ring-slate-200 border border-slate-100 animate-scale-in">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                      <span className="font-semibold text-sm text-slate-800 flex items-center gap-1.5">
+                        <MessageCircle className="w-4 h-4 text-emerald-600" />
+                        Chats de entrega
+                      </span>
+                      <span className="text-xs text-slate-500">{chatsActivos.length} activos</span>
+                    </div>
+                    <div className="max-h-72 overflow-y-auto divide-y divide-slate-50 mt-1">
+                      {chatsActivos.length === 0 ? (
+                        <div className="p-4 text-center">
+                          <p className="text-xs text-slate-500 font-medium">No hay entregas activas.</p>
+                          <p className="text-[11px] text-slate-400 mt-1">
+                            El chat se activa automáticamente cuando se aprueba una solicitud de recuperación.
+                          </p>
+                        </div>
+                      ) : (
+                        chatsActivos.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => {
+                              abrirChat(c.id, c.titulo);
+                              setPanelChatAbierto(false);
+                            }}
+                            className="w-full text-left p-2.5 text-xs rounded-xl transition-colors hover:bg-emerald-50/70 flex items-center justify-between group"
+                          >
+                            <div className="min-w-0 pr-2">
+                              <p className="font-semibold text-slate-800 group-hover:text-emerald-700 truncate">
+                                {c.titulo}
+                              </p>
+                              <p className="text-[11px] text-slate-500">Coordinar entrega campus/hogar</p>
+                            </div>
+                            <span className="text-emerald-600 font-bold text-xs group-hover:translate-x-0.5 transition-transform flex-shrink-0">
+                              Abrir &rarr;
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Notificaciones */}
               <div className="relative">
@@ -200,31 +335,133 @@ export const Header: React.FC = () => {
         {/* Mobile menu toggle */}
         <div className="flex items-center gap-2 md:hidden">
           {usuario && (
-            <button
-              type="button"
-              onClick={toggleCampana}
-              aria-label="Notificaciones"
-              className="relative p-2 text-slate-600 hover:text-slate-900"
-            >
-              <Bell className="w-6 h-6" />
-              {noLeidas > 0 && (
-                <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white">
-                  {noLeidas}
-                </span>
-              )}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={togglePanelChat}
+                aria-label="Chats de entrega"
+                className="relative p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-600 hover:text-slate-900 rounded-xl"
+              >
+                <MessageCircle className="w-6 h-6" />
+                {chatsActivos.length > 0 && (
+                  <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold text-white">
+                    {chatsActivos.length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={toggleCampana}
+                aria-label="Notificaciones"
+                className="relative p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-600 hover:text-slate-900 rounded-xl"
+              >
+                <Bell className="w-6 h-6" />
+                {noLeidas > 0 && (
+                  <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white">
+                    {noLeidas}
+                  </span>
+                )}
+              </button>
+            </>
           )}
           <button
             type="button"
-            onClick={() => setMenuAbierto(!menuAbierto)}
+            onClick={() => {
+              const siguiente = !menuAbierto;
+              setMenuAbierto(siguiente);
+              if (siguiente) {
+                setPanelChatAbierto(false);
+                setCampanaAbierta(false);
+              }
+            }}
             aria-expanded={menuAbierto}
             aria-label="Abrir menú"
-            className="p-2 rounded-xl text-slate-700 hover:bg-slate-100"
+            className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-700 hover:bg-slate-100"
           >
             {menuAbierto ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
       </div>
+
+      {/* Popovers Móviles */}
+      {panelChatAbierto && (
+        <div className="md:hidden border-t border-slate-200 bg-white p-4 shadow-lg animate-scale-in">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <span className="font-semibold text-sm text-slate-800 flex items-center gap-1.5">
+              <MessageCircle className="w-4 h-4 text-emerald-600" />
+              Chats de entrega ({chatsActivos.length})
+            </span>
+            <button
+              onClick={() => setPanelChatAbierto(false)}
+              className="text-xs text-slate-400 hover:text-slate-600 p-1"
+            >
+              Cerrar
+            </button>
+          </div>
+          <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 mt-2">
+            {chatsActivos.length === 0 ? (
+              <p className="p-3 text-center text-xs text-slate-500">
+                No tienes entregas activas en coordinación.
+              </p>
+            ) : (
+              chatsActivos.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    abrirChat(c.id, c.titulo);
+                    setPanelChatAbierto(false);
+                  }}
+                  className="w-full text-left p-2.5 text-xs rounded-xl hover:bg-emerald-50 flex items-center justify-between"
+                >
+                  <div>
+                    <p className="font-semibold text-slate-800">{c.titulo}</p>
+                    <p className="text-[11px] text-slate-500">Coordinar entrega campus/hogar</p>
+                  </div>
+                  <span className="text-emerald-600 font-bold text-xs">Abrir &rarr;</span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {campanaAbierta && (
+        <div className="md:hidden border-t border-slate-200 bg-white p-4 shadow-lg animate-scale-in">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <span className="font-semibold text-sm text-slate-800 flex items-center gap-1.5">
+              <Bell className="w-4 h-4 text-brand-600" />
+              Notificaciones ({notificaciones.length})
+            </span>
+            <button
+              onClick={() => setCampanaAbierta(false)}
+              className="text-xs text-slate-400 hover:text-slate-600 p-1"
+            >
+              Cerrar
+            </button>
+          </div>
+          <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 mt-2">
+            {notificaciones.length === 0 ? (
+              <p className="p-3 text-center text-xs text-slate-500">No tienes notificaciones.</p>
+            ) : (
+              notificaciones.map((n) => (
+                <div key={n.id} className="p-2 text-xs">
+                  <p className="text-slate-700">{n.mensaje}</p>
+                  {n.enlace && (
+                    <Link
+                      to={n.enlace}
+                      onClick={() => setCampanaAbierta(false)}
+                      className="inline-block mt-1 text-brand-600 font-semibold"
+                    >
+                      Ver detalle &rarr;
+                    </Link>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Mobile Drawer */}
       {menuAbierto && (

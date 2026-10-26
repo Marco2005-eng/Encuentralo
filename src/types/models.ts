@@ -19,6 +19,8 @@ export interface Usuario {
   telefono?: string;
   rol: Rol;
   creadoEn: string;
+  baneadoHasta?: string | null;
+  motivoBaneo?: string | null;
 }
 
 export interface Objeto {
@@ -46,6 +48,7 @@ export interface Solicitud {
   motivoRechazo?: string;
   creadoEn: string;
   resueltaEn?: string;
+  oculta?: boolean;
 }
 
 export interface Notificacion {

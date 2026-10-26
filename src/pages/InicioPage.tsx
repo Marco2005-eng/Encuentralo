@@ -68,21 +68,21 @@ export const InicioPage: React.FC = () => {
           </form>
 
           {/* Botones Grandes Principales (IHC 7.1) */}
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <Link to="/objetos/nuevo?tipo=perdido">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto">
+            <Link to="/objetos/nuevo?tipo=perdido" className="w-full sm:w-auto">
               <Button
                 variant="danger"
                 size="lg"
-                className="shadow-lg shadow-rose-950/20 font-bold px-8 min-w-[200px]"
+                className="w-full sm:min-w-[200px] shadow-lg shadow-rose-950/20 font-bold px-8"
               >
                 Perdí algo
               </Button>
             </Link>
-            <Link to="/objetos/nuevo?tipo=encontrado">
+            <Link to="/objetos/nuevo?tipo=encontrado" className="w-full sm:w-auto">
               <Button
                 variant="primary"
                 size="lg"
-                className="bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-950/20 font-bold px-8 min-w-[200px]"
+                className="w-full sm:min-w-[200px] bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-950/20 font-bold px-8"
               >
                 Encontré algo
               </Button>

@@ -30,6 +30,15 @@ export const authService: AuthService = {
     const u = leer('usuarios').find((x) => x.correo === c && x.contrasena === contrasena);
     // Mensaje genérico: no revela si el correo existe.
     if (!u) throw new ServiceError('Correo o contraseña incorrectos. Revisa los datos e inténtalo de nuevo.');
+    
+    // Verificar si está suspendido
+    if (u.baneadoHasta && new Date(u.baneadoHasta) > new Date()) {
+      const fecha = new Date(u.baneadoHasta).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
+      throw new ServiceError(
+        `Tu cuenta se encuentra suspendida hasta el ${fecha}. Motivo: ${u.motivoBaneo || 'Infracción a las normas de convivencia'}.`
+      );
+    }
+
     escribirValor(SESION, u.id);
     return publico(u);
   },
@@ -92,6 +101,45 @@ export const authService: AuthService = {
     usuarios[idx] = {
       ...usuarios[idx],
       contrasena,
+    };
+    escribir('usuarios', usuarios);
+  },
+
+  async listarUsuarios(admin: Usuario): Promise<Usuario[]> {
+    await latencia();
+    if (admin.rol !== 'admin') throw new ServiceError('Acceso restringido.');
+    return leer('usuarios').map(publico);
+  },
+
+  async suspenderUsuario(usuarioId: string, dias: number, motivo: string, admin: Usuario): Promise<void> {
+    await latencia();
+    if (admin.rol !== 'admin') throw new ServiceError('Acceso restringido.');
+    const usuarios = leer('usuarios');
+    const idx = usuarios.findIndex((u) => u.id === usuarioId);
+    if (idx === -1) throw new ServiceError('Usuario no encontrado.');
+
+    const fechaFin = new Date();
+    fechaFin.setDate(fechaFin.getDate() + dias);
+
+    usuarios[idx] = {
+      ...usuarios[idx],
+      baneadoHasta: fechaFin.toISOString(),
+      motivoBaneo: motivo.trim(),
+    };
+    escribir('usuarios', usuarios);
+  },
+
+  async quitarSuspension(usuarioId: string, admin: Usuario): Promise<void> {
+    await latencia();
+    if (admin.rol !== 'admin') throw new ServiceError('Acceso restringido.');
+    const usuarios = leer('usuarios');
+    const idx = usuarios.findIndex((u) => u.id === usuarioId);
+    if (idx === -1) throw new ServiceError('Usuario no encontrado.');
+
+    usuarios[idx] = {
+      ...usuarios[idx],
+      baneadoHasta: null,
+      motivoBaneo: null,
     };
     escribir('usuarios', usuarios);
   },

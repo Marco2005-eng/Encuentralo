@@ -7,7 +7,11 @@
     scroll-behavior: smooth;
   }
   body {
-    @apply bg-slate-50 font-sans text-slate-900 antialiased;
+    @apply bg-slate-50 font-sans text-slate-900 antialiased overflow-x-hidden;
+  }
+  img,
+  video {
+    @apply max-w-full h-auto;
   }
   h1,
   h2,

@@ -54,6 +54,9 @@ export interface AuthService {
   usuarioActual(): Promise<Usuario | null>;
   actualizarPerfil(datos: { nombre: string; telefono?: string }): Promise<Usuario>;
   asignarContrasena(contrasena: string): Promise<void>;
+  listarUsuarios(admin: Usuario): Promise<Usuario[]>;
+  suspenderUsuario(usuarioId: string, dias: number, motivo: string, admin: Usuario): Promise<void>;
+  quitarSuspension(usuarioId: string, admin: Usuario): Promise<void>;
 }
 
 export interface ObjetosService {
@@ -76,6 +79,8 @@ export interface SolicitudesService {
   aprobar(id: string, usuario: Usuario): Promise<void>;
   rechazar(id: string, motivo: string, usuario: Usuario): Promise<void>;
   cancelar(id: string, usuario: Usuario): Promise<void>;
+  eliminar(id: string, usuario: Usuario): Promise<void>;
+  ocultar(id: string, oculta: boolean, usuario: Usuario): Promise<void>;
   listarMensajesEntrega(solicitudId: string): Promise<MensajeEntrega[]>;
   enviarMensajeEntrega(solicitudId: string, mensaje: string, emisorId: string): Promise<MensajeEntrega>;
 }
@@ -83,6 +88,7 @@ export interface SolicitudesService {
 export interface NotificacionesService {
   delUsuario(usuarioId: string): Promise<Notificacion[]>;
   marcarTodasLeidas(usuarioId: string): Promise<void>;
+  crear(usuarioId: string, mensaje: string, enlace?: string): Promise<Notificacion>;
 }
 
 export interface EstadisticasService {

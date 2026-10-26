@@ -5,6 +5,9 @@ import { services } from '@/services';
 interface AuthContextType {
   usuario: Usuario | null;
   cargando: boolean;
+  estaSuspendido: boolean;
+  motivoSuspension: string | null;
+  fechaFinSuspension: string | null;
   iniciarSesion: (correo: string, contrasena: string) => Promise<Usuario>;
   iniciarSesionConGoogle: () => Promise<void>;
   registrar: (datos: { nombre: string; correo: string; contrasena: string }) => Promise<Usuario>;
@@ -69,11 +72,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await services.auth.asignarContrasena(contrasena);
   };
 
+  const estaSuspendido = Boolean(
+    usuario?.baneadoHasta && new Date(usuario.baneadoHasta) > new Date()
+  );
+  const motivoSuspension = estaSuspendido ? (usuario?.motivoBaneo || 'Infracción a las normas del campus') : null;
+  const fechaFinSuspension = estaSuspendido && usuario?.baneadoHasta ? usuario.baneadoHasta : null;
+
   return (
     <AuthContext.Provider
       value={{
         usuario,
         cargando,
+        estaSuspendido,
+        motivoSuspension,
+        fechaFinSuspension,
         iniciarSesion,
         iniciarSesionConGoogle,
         registrar,

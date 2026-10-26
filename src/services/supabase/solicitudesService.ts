@@ -2,6 +2,7 @@ import type { SolicitudConObjeto, SolicitudesService } from '@/services/types';
 import type { Solicitud, Usuario } from '@/types/models';
 import { SUPABASE_URL, SUPABASE_ANON_KEY, obtenerSesionLocal } from './client';
 import { subirImagenASupabaseStorage } from './storageService';
+import { supabaseNotificacionesService } from './notificacionesService';
 
 function getHeaders(token?: string) {
   const sesion = obtenerSesionLocal();
@@ -81,6 +82,15 @@ export const supabaseSolicitudesService: SolicitudesService = {
         }),
       }).catch(() => {});
     }
+
+    // 4. Crear notificación al dueño del objeto (IHC)
+    const mensajeNotif =
+      objeto.tipo === 'perdido'
+        ? `¡Buenas noticias! Un usuario reportó haber encontrado tu objeto perdido "${objeto.nombre}".`
+        : `Has recibido una solicitud de recuperación para "${objeto.nombre}".`;
+    await supabaseNotificacionesService
+      .crear(objeto.publicado_por, mensajeNotif, '/mis-publicaciones')
+      .catch(() => {});
 
     const creadas = await res.json();
     const c = creadas[0];
@@ -257,11 +267,30 @@ export const supabaseSolicitudesService: SolicitudesService = {
         actualizado_en: new Date().toISOString(),
       }),
     });
+
+    // Notificar al solicitante que fue aprobada
+    await supabaseNotificacionesService
+      .crear(
+        sol.solicitante_id,
+        '¡Tu solicitud para el objeto fue aprobada! Ya pueden coordinar la entrega en el chat.',
+        '/mis-solicitudes'
+      )
+      .catch(() => {});
   },
 
   async rechazar(id, motivo, _usuario): Promise<void> {
     const sesion = obtenerSesionLocal();
     const token = sesion?.access_token;
+
+    // Obtener datos de la solicitud para saber a quién notificar
+    const sRes = await fetch(`${SUPABASE_URL}/rest/v1/solicitudes?id=eq.${id}&select=solicitante_id`, {
+      headers: getHeaders(token),
+    });
+    let solicitanteId: string | null = null;
+    if (sRes.ok) {
+      const datos = await sRes.json();
+      if (datos && datos.length > 0) solicitanteId = datos[0].solicitante_id;
+    }
 
     await fetch(`${SUPABASE_URL}/rest/v1/solicitudes?id=eq.${id}`, {
       method: 'PATCH',
@@ -272,6 +301,16 @@ export const supabaseSolicitudesService: SolicitudesService = {
         resuelta_en: new Date().toISOString(),
       }),
     });
+
+    if (solicitanteId) {
+      await supabaseNotificacionesService
+        .crear(
+          solicitanteId,
+          `Tu solicitud de recuperación no fue aceptada. Motivo: ${motivo}`,
+          '/mis-solicitudes'
+        )
+        .catch(() => {});
+    }
   },
 
   async cancelar(id, _usuario): Promise<void> {
@@ -281,6 +320,23 @@ export const supabaseSolicitudesService: SolicitudesService = {
     await fetch(`${SUPABASE_URL}/rest/v1/solicitudes?id=eq.${id}`, {
       method: 'DELETE',
       headers: getHeaders(token),
+    });
+  },
+
+  async eliminar(id: string, _usuario: Usuario): Promise<void> {
+    const sesion = obtenerSesionLocal();
+    await fetch(`${SUPABASE_URL}/rest/v1/solicitudes?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(sesion?.access_token),
+    });
+  },
+
+  async ocultar(id: string, oculta: boolean, _usuario: Usuario): Promise<void> {
+    const sesion = obtenerSesionLocal();
+    await fetch(`${SUPABASE_URL}/rest/v1/solicitudes?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: getHeaders(sesion?.access_token),
+      body: JSON.stringify({ oculta }),
     });
   },
 

@@ -9,6 +9,7 @@ import { OBJETOS_SEED, USUARIOS_SEED, SOLICITUDES_SEED } from './local/seed';
 import { supabaseAuthService } from './supabase/authService';
 import { supabaseObjetosService } from './supabase/objetosService';
 import { supabaseSolicitudesService } from './supabase/solicitudesService';
+import { supabaseNotificacionesService } from './supabase/notificacionesService';
 import { supabaseEstadisticasService } from './supabase/estadisticasService';
 
 const origenDatos = import.meta.env.VITE_DATA_SOURCE || 'local';
@@ -22,7 +23,7 @@ export const services: DataSource = {
   auth: origenDatos === 'supabase' ? supabaseAuthService : authService,
   objetos: origenDatos === 'supabase' ? supabaseObjetosService : objetosService,
   solicitudes: origenDatos === 'supabase' ? supabaseSolicitudesService : solicitudesService,
-  notificaciones: notificacionesService,
+  notificaciones: origenDatos === 'supabase' ? supabaseNotificacionesService : notificacionesService,
   estadisticas: origenDatos === 'supabase' ? supabaseEstadisticasService : estadisticasService,
   async restablecerDemo() {
     borrarTodo();

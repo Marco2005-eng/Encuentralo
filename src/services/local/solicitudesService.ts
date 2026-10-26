@@ -62,12 +62,12 @@ export const solicitudesService: SolicitudesService = {
 
     escribir('solicitudes', [nueva, ...solicitudes]);
 
-    // Notificar al dueño de la publicación
-    crearNotificacion(
-      objeto.publicadoPor,
-      `Has recibido una nueva solicitud de recuperación para "${objeto.nombre}".`,
-      '/mis-publicaciones'
-    );
+    // Notificar al dueño de la publicación (IHC adaptativo)
+    const mensajeNotif =
+      objeto.tipo === 'perdido'
+        ? `¡Buenas noticias! Un usuario reportó haber encontrado tu objeto perdido "${objeto.nombre}".`
+        : `Has recibido una nueva solicitud de recuperación para "${objeto.nombre}".`;
+    crearNotificacion(objeto.publicadoPor, mensajeNotif, '/mis-publicaciones');
 
     return nueva;
   },
@@ -251,6 +251,29 @@ export const solicitudesService: SolicitudesService = {
         objeto.actualizadoEn = ahora();
         escribir('objetos', objetos);
       }
+    }
+  },
+
+  async eliminar(id, usuario) {
+    await latencia();
+    if (usuario.rol !== 'admin') {
+      throw new ServiceError('Solo un administrador puede eliminar solicitudes.');
+    }
+    const solicitudes = leer('solicitudes');
+    const filtradas = solicitudes.filter((s) => s.id !== id);
+    escribir('solicitudes', filtradas);
+  },
+
+  async ocultar(id, oculta, usuario) {
+    await latencia();
+    if (usuario.rol !== 'admin') {
+      throw new ServiceError('Solo un administrador puede ocultar solicitudes.');
+    }
+    const solicitudes = leer('solicitudes');
+    const s = solicitudes.find((item) => item.id === id);
+    if (s) {
+      s.oculta = oculta;
+      escribir('solicitudes', solicitudes);
     }
   },
 
