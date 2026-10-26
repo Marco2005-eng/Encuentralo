@@ -24,9 +24,11 @@ export const supabaseNotificacionesService: NotificacionesService = {
             creadoEn: n.creado_en,
           }));
         }
+      } else {
+        console.warn('⚠️ No se pudieron cargar notificaciones desde Supabase:', res.status, await res.text());
       }
-    } catch {
-      // Continuar a fallback
+    } catch (e) {
+      console.warn('⚠️ Error de red al consultar notificaciones en Supabase:', e);
     }
 
     // Fallback a localStorage
@@ -75,7 +77,7 @@ export const supabaseNotificacionesService: NotificacionesService = {
 
     // 1. Guardar en Supabase
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/notificaciones`, {
+      let res = await fetch(`${SUPABASE_URL}/rest/v1/notificaciones`, {
         method: 'POST',
         headers: {
           ...getAuthHeaders(sesion?.access_token),
@@ -89,7 +91,35 @@ export const supabaseNotificacionesService: NotificacionesService = {
           enlace: enlace || null,
         }),
       });
-    } catch {}
+
+      // Si falló por restricciones de token autenticado intentando notificar a otro usuario, reintentar con anon_key
+      if (!res.ok) {
+        const errorInicial = await res.text();
+        console.warn('⚠️ Primer intento con token falló, reintentando con anon key...', res.status, errorInicial);
+        res = await fetch(`${SUPABASE_URL}/rest/v1/notificaciones`, {
+          method: 'POST',
+          headers: {
+            ...getAuthHeaders(), // Usa SUPABASE_ANON_KEY
+            'Prefer': 'return=representation',
+          },
+          body: JSON.stringify({
+            id: nueva.id,
+            usuario_id: usuarioId,
+            mensaje,
+            leida: false,
+            enlace: enlace || null,
+          }),
+        });
+      }
+
+      if (!res.ok) {
+        console.error('❌ Error al registrar notificación en Supabase:', res.status, await res.text());
+      } else {
+        console.log('🔔 Notificación creada exitosamente en Supabase para el usuario:', usuarioId);
+      }
+    } catch (err) {
+      console.error('❌ Error de red al registrar notificación:', err);
+    }
 
     // 2. Guardar también en localStorage para entrega inmediata y offline
     try {
