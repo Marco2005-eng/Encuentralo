@@ -1,0 +1,274 @@
+import type { AuthService } from '@/services/types';
+import type { Usuario } from '@/types/models';
+import {
+  SUPABASE_URL,
+  getAuthHeaders,
+  guardarSesionLocal,
+  obtenerSesionLocal,
+} from './client';
+
+export const supabaseAuthService: AuthService = {
+  async registrar({ nombre, correo, contrasena }): Promise<Usuario> {
+    // 1. Verificar primero si el correo ya existe en perfiles (por ejemplo, si ya se creó con Google)
+    const checkRes = await fetch(`${SUPABASE_URL}/rest/v1/perfiles?correo=eq.${correo.trim().toLowerCase()}&select=id`, {
+      headers: getAuthHeaders(),
+    });
+    if (checkRes.ok) {
+      const existentes = await checkRes.json();
+      if (existentes && existentes.length > 0) {
+        throw new Error('Ya existe una cuenta registrada con este correo electrónico (posiblemente creada con Google). Inicia sesión con Google o usa tu contraseña.');
+      }
+    }
+
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        email: correo.trim().toLowerCase(),
+        password: contrasena,
+        data: {
+          nombre,
+          rol: 'usuario',
+        },
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      // Supabase suele responder con "User already registered"
+      const errorMsg = data.msg || data.error_description || '';
+      if (errorMsg.toLowerCase().includes('already') || errorMsg.toLowerCase().includes('registered')) {
+        throw new Error('Ya existe una cuenta con este correo. Por favor inicia sesión directamente o ingresa con Google.');
+      }
+      throw new Error(errorMsg || 'No se pudo crear la cuenta.');
+    }
+
+    if (data.access_token) {
+      guardarSesionLocal(data);
+    }
+
+    const user = data.user || data;
+    return {
+      id: user.id,
+      nombre: user.user_metadata?.nombre || nombre,
+      correo: user.email || correo,
+      rol: (user.user_metadata?.rol as 'usuario' | 'admin') || 'usuario',
+      creadoEn: user.created_at || new Date().toISOString(),
+    };
+  },
+
+  async iniciarSesion(correo: string, contrasena: string): Promise<Usuario> {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        email: correo,
+        password: contrasena,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(
+        data.error_description || data.msg || 'Credenciales incorrectas o usuario no registrado.'
+      );
+    }
+
+    guardarSesionLocal(data);
+    const user = data.user;
+
+    return {
+      id: user.id,
+      nombre: user.user_metadata?.nombre || user.user_metadata?.full_name || 'Usuario',
+      correo: user.email || correo,
+      rol: (user.user_metadata?.rol as 'usuario' | 'admin') || 'usuario',
+      creadoEn: user.created_at || new Date().toISOString(),
+    };
+  },
+
+  async iniciarSesionConGoogle(): Promise<void> {
+    // Redirige directamente al endpoint REST oficial de Supabase Auth para Google OAuth
+    const redirectTo = encodeURIComponent(`${window.location.origin}/objetos`);
+    const googleAuthUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${redirectTo}`;
+    window.location.href = googleAuthUrl;
+  },
+
+  async cerrarSesion(): Promise<void> {
+    const sesion = obtenerSesionLocal();
+    if (sesion?.access_token) {
+      await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+        method: 'POST',
+        headers: getAuthHeaders(sesion.access_token),
+      }).catch(() => {});
+    }
+    guardarSesionLocal(null);
+  },
+
+  async usuarioActual(): Promise<Usuario | null> {
+    // 1. Si venimos redirigidos de Google OAuth, los tokens vienen en el hash (#access_token=...)
+    if (window.location.hash.includes('access_token=')) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+
+      if (accessToken) {
+        // Limpiamos el hash de la URL para que no quede visible
+        window.history.replaceState(null, '', window.location.pathname);
+
+        // Obtener usuario con este token
+        const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+          headers: getAuthHeaders(accessToken),
+        });
+
+        if (res.ok) {
+          const user = await res.json();
+          guardarSesionLocal({ access_token: accessToken, refresh_token: refreshToken, user });
+
+          // Consultar el rol real en public.perfiles
+          let rolReal: 'usuario' | 'admin' = (user.user_metadata?.rol as 'usuario' | 'admin') || 'usuario';
+          let telefonoReal = user.user_metadata?.telefono || undefined;
+          let nombreReal = user.user_metadata?.nombre || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario';
+
+          try {
+            const perfilRes = await fetch(`${SUPABASE_URL}/rest/v1/perfiles?id=eq.${user.id}&select=*`, {
+              headers: getAuthHeaders(accessToken),
+            });
+            if (perfilRes.ok) {
+              const perfiles = await perfilRes.json();
+              if (perfiles && perfiles.length > 0) {
+                if (perfiles[0].rol) rolReal = perfiles[0].rol;
+                if (perfiles[0].nombre) nombreReal = perfiles[0].nombre;
+                if (perfiles[0].telefono) telefonoReal = perfiles[0].telefono;
+              }
+            }
+          } catch {
+            // Ignorar y usar user_metadata
+          }
+
+          return {
+            id: user.id,
+            nombre: nombreReal,
+            correo: user.email || '',
+            telefono: telefonoReal,
+            rol: rolReal,
+            creadoEn: user.created_at || new Date().toISOString(),
+          };
+        }
+      }
+    }
+
+    // 2. Sesión guardada previamente
+    const sesion = obtenerSesionLocal();
+    if (!sesion?.access_token) return null;
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: getAuthHeaders(sesion.access_token),
+      });
+
+      if (!res.ok) {
+        guardarSesionLocal(null);
+        return null;
+      }
+
+      const user = await res.json();
+
+      // Consultar siempre el rol actualizado en public.perfiles
+      let rolReal: 'usuario' | 'admin' = (user.user_metadata?.rol as 'usuario' | 'admin') || 'usuario';
+      let telefonoReal = user.user_metadata?.telefono || undefined;
+      let nombreReal = user.user_metadata?.nombre || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario';
+
+      try {
+        const perfilRes = await fetch(`${SUPABASE_URL}/rest/v1/perfiles?id=eq.${user.id}&select=*`, {
+          headers: getAuthHeaders(sesion.access_token),
+        });
+        if (perfilRes.ok) {
+          const perfiles = await perfilRes.json();
+          if (perfiles && perfiles.length > 0) {
+            if (perfiles[0].rol) rolReal = perfiles[0].rol;
+            if (perfiles[0].nombre) nombreReal = perfiles[0].nombre;
+            if (perfiles[0].telefono) telefonoReal = perfiles[0].telefono;
+          }
+        }
+      } catch {
+        // Ignorar y usar user_metadata
+      }
+
+      return {
+        id: user.id,
+        nombre: nombreReal,
+        correo: user.email || '',
+        telefono: telefonoReal,
+        rol: rolReal,
+        creadoEn: user.created_at || new Date().toISOString(),
+      };
+    } catch {
+      return null;
+    }
+  },
+
+  async actualizarPerfil({ nombre, telefono }): Promise<Usuario> {
+    const sesion = obtenerSesionLocal();
+    if (!sesion?.access_token) {
+      throw new Error('No hay una sesión activa.');
+    }
+
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      method: 'PUT',
+      headers: getAuthHeaders(sesion.access_token),
+      body: JSON.stringify({
+        data: {
+          nombre: nombre.trim(),
+          telefono: telefono?.trim() || null,
+        },
+      }),
+    });
+
+    const user = await res.json();
+    if (!res.ok) {
+      throw new Error(user.msg || user.error_description || 'No se pudo actualizar el perfil.');
+    }
+
+    // Actualizar también la tabla public.perfiles en Supabase
+    await fetch(`${SUPABASE_URL}/rest/v1/perfiles?id=eq.${user.id}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(sesion.access_token),
+      body: JSON.stringify({
+        nombre: nombre.trim(),
+        telefono: telefono?.trim() || null,
+      }),
+    }).catch(() => {});
+
+    sesion.user = user;
+    guardarSesionLocal(sesion);
+
+    return {
+      id: user.id,
+      nombre: user.user_metadata?.nombre || nombre,
+      correo: user.email || '',
+      telefono: user.user_metadata?.telefono || undefined,
+      rol: (user.user_metadata?.rol as 'usuario' | 'admin') || 'usuario',
+      creadoEn: user.created_at || new Date().toISOString(),
+    };
+  },
+
+  async asignarContrasena(contrasena: string): Promise<void> {
+    const sesion = obtenerSesionLocal();
+    if (!sesion?.access_token) {
+      throw new Error('No hay una sesión activa.');
+    }
+
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      method: 'PUT',
+      headers: getAuthHeaders(sesion.access_token),
+      body: JSON.stringify({
+        password: contrasena,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.msg || data.error_description || 'No se pudo asignar la contraseña.');
+    }
+  },
+};
