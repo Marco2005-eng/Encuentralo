@@ -18,7 +18,7 @@ function crearNotificacion(usuarioId: string, mensaje: string, enlace?: string) 
 }
 
 export const solicitudesService: SolicitudesService = {
-  async crear(objetoId, pruebaPertenencia, usuario) {
+  async crear(objetoId, pruebaPertenencia, usuario, pruebaImagen) {
     await latencia();
     inicializarStorageSiVacio();
     const objetos = leer('objetos');
@@ -48,6 +48,7 @@ export const solicitudesService: SolicitudesService = {
       objetoId,
       solicitanteId: usuario.id,
       pruebaPertenencia,
+      pruebaImagen,
       estado: 'pendiente',
       creadoEn: ahora(),
     };
@@ -251,5 +252,23 @@ export const solicitudesService: SolicitudesService = {
         escribir('objetos', objetos);
       }
     }
+  },
+
+  async listarMensajesEntrega(solicitudId: string) {
+    const raw = localStorage.getItem(`encuentralo:chat_${solicitudId}`);
+    return raw ? JSON.parse(raw) : [];
+  },
+
+  async enviarMensajeEntrega(solicitudId: string, mensaje: string, emisorId: string) {
+    const lista = await this.listarMensajesEntrega(solicitudId);
+    const nuevo = {
+      id: nuevoId(),
+      solicitudId,
+      emisorId,
+      mensaje: mensaje.trim(),
+      creadoEn: ahora(),
+    };
+    localStorage.setItem(`encuentralo:chat_${solicitudId}`, JSON.stringify([...lista, nuevo]));
+    return nuevo;
   },
 };

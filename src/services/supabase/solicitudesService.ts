@@ -1,6 +1,7 @@
 import type { SolicitudConObjeto, SolicitudesService } from '@/services/types';
 import type { Solicitud, Usuario } from '@/types/models';
 import { SUPABASE_URL, SUPABASE_ANON_KEY, obtenerSesionLocal } from './client';
+import { subirImagenASupabaseStorage } from './storageService';
 
 function getHeaders(token?: string) {
   const sesion = obtenerSesionLocal();
@@ -13,7 +14,7 @@ function getHeaders(token?: string) {
 }
 
 export const supabaseSolicitudesService: SolicitudesService = {
-  async crear(objetoId, pruebaPertenencia, usuario): Promise<Solicitud> {
+  async crear(objetoId, pruebaPertenencia, usuario, pruebaImagen): Promise<Solicitud> {
     const sesion = obtenerSesionLocal();
     const token = sesion?.access_token;
 
@@ -33,11 +34,26 @@ export const supabaseSolicitudesService: SolicitudesService = {
       throw new Error('Este objeto ya fue recuperado.');
     }
 
+    // Subir imagen al storage si viene adjunta
+    let urlImagenPrueba: string | null = null;
+    if (pruebaImagen) {
+      if (pruebaImagen.startsWith('data:image')) {
+        try {
+          urlImagenPrueba = await subirImagenASupabaseStorage(pruebaImagen);
+        } catch {
+          urlImagenPrueba = pruebaImagen;
+        }
+      } else {
+        urlImagenPrueba = pruebaImagen;
+      }
+    }
+
     // 2. Insertar solicitud
     const nuevaSol = {
       objeto_id: objetoId,
       solicitante_id: usuario.id,
       prueba_pertenencia: pruebaPertenencia,
+      prueba_imagen: urlImagenPrueba,
       estado: 'pendiente',
     };
 
@@ -73,6 +89,7 @@ export const supabaseSolicitudesService: SolicitudesService = {
       objetoId: c.objeto_id,
       solicitanteId: c.solicitante_id,
       pruebaPertenencia: c.prueba_pertenencia,
+      pruebaImagen: c.prueba_imagen || undefined,
       estado: c.estado,
       motivoRechazo: c.motivo_rechazo || undefined,
       creadoEn: c.creado_en,
@@ -95,6 +112,7 @@ export const supabaseSolicitudesService: SolicitudesService = {
       objetoId: s.objeto_id,
       solicitanteId: s.solicitante_id,
       pruebaPertenencia: s.prueba_pertenencia,
+      pruebaImagen: s.prueba_imagen || undefined,
       estado: s.estado,
       motivoRechazo: s.motivo_rechazo || undefined,
       creadoEn: s.creado_en,
@@ -113,12 +131,24 @@ export const supabaseSolicitudesService: SolicitudesService = {
 
   async delObjeto(objetoId, _usuario): Promise<SolicitudConObjeto[]> {
     const sesion = obtenerSesionLocal();
-    const res = await fetch(
+    // 1. Intentar con join de perfiles
+    let res = await fetch(
       `${SUPABASE_URL}/rest/v1/solicitudes?objeto_id=eq.${objetoId}&order=creado_en.desc&select=*,perfiles(nombre,telefono)`,
       {
         headers: getHeaders(sesion?.access_token),
       }
     );
+
+    // Si fallara por la relación de perfiles, consultar solicitudes directamente
+    if (!res.ok) {
+      res = await fetch(
+        `${SUPABASE_URL}/rest/v1/solicitudes?objeto_id=eq.${objetoId}&order=creado_en.desc&select=*`,
+        {
+          headers: getHeaders(sesion?.access_token),
+        }
+      );
+    }
+
     if (!res.ok) return [];
     const datos = await res.json();
     return datos.map((s: any) => ({
@@ -126,11 +156,12 @@ export const supabaseSolicitudesService: SolicitudesService = {
       objetoId: s.objeto_id,
       solicitanteId: s.solicitante_id,
       pruebaPertenencia: s.prueba_pertenencia,
+      pruebaImagen: s.prueba_imagen || undefined,
       estado: s.estado,
       motivoRechazo: s.motivo_rechazo || undefined,
       creadoEn: s.creado_en,
       resueltaEn: s.resuelta_en || undefined,
-      solicitanteNombre: s.perfiles?.nombre || 'Usuario',
+      solicitanteNombre: s.perfiles?.nombre || 'Usuario solicitante',
       solicitanteTelefono: s.perfiles?.telefono || undefined,
     }));
   },
@@ -150,6 +181,7 @@ export const supabaseSolicitudesService: SolicitudesService = {
       objetoId: s.objeto_id,
       solicitanteId: s.solicitante_id,
       pruebaPertenencia: s.prueba_pertenencia,
+      pruebaImagen: s.prueba_imagen || undefined,
       estado: s.estado,
       motivoRechazo: s.motivo_rechazo || undefined,
       creadoEn: s.creado_en,
@@ -185,6 +217,7 @@ export const supabaseSolicitudesService: SolicitudesService = {
       objetoId: s.objeto_id,
       solicitanteId: s.solicitante_id,
       pruebaPertenencia: s.prueba_pertenencia,
+      pruebaImagen: s.prueba_imagen || undefined,
       estado: s.estado,
       motivoRechazo: s.motivo_rechazo || undefined,
       creadoEn: s.creado_en,
@@ -249,5 +282,53 @@ export const supabaseSolicitudesService: SolicitudesService = {
       method: 'DELETE',
       headers: getHeaders(token),
     });
+  },
+
+  async listarMensajesEntrega(solicitudId: string) {
+    const sesion = obtenerSesionLocal();
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/mensajes_entrega?solicitud_id=eq.${solicitudId}&order=creado_en.asc&select=*`,
+      {
+        headers: getHeaders(sesion?.access_token),
+      }
+    );
+    if (!res.ok) return [];
+    const datos = await res.json();
+    return datos.map((m: any) => ({
+      id: m.id,
+      solicitudId: m.solicitud_id,
+      emisorId: m.emisor_id,
+      mensaje: m.mensaje,
+      creadoEn: m.creado_en,
+    }));
+  },
+
+  async enviarMensajeEntrega(solicitudId: string, mensaje: string, emisorId: string) {
+    const sesion = obtenerSesionLocal();
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/mensajes_entrega`, {
+      method: 'POST',
+      headers: {
+        ...getHeaders(sesion?.access_token),
+        'Prefer': 'return=representation',
+      },
+      body: JSON.stringify({
+        solicitud_id: solicitudId,
+        emisor_id: emisorId,
+        mensaje: mensaje.trim(),
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error('No se pudo enviar el mensaje.');
+    }
+    const creados = await res.json();
+    const m = creados[0];
+    return {
+      id: m.id,
+      solicitudId: m.solicitud_id,
+      emisorId: m.emisor_id,
+      mensaje: m.mensaje,
+      creadoEn: m.creado_en,
+    };
   },
 };

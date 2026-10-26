@@ -1,6 +1,7 @@
 import type {
   Categoria,
   EstadoObjeto,
+  MensajeEntrega,
   Notificacion,
   Objeto,
   Solicitud,
@@ -67,7 +68,7 @@ export interface ObjetosService {
 }
 
 export interface SolicitudesService {
-  crear(objetoId: string, pruebaPertenencia: string, usuario: Usuario): Promise<Solicitud>;
+  crear(objetoId: string, pruebaPertenencia: string, usuario: Usuario, pruebaImagen?: string): Promise<Solicitud>;
   delSolicitante(usuarioId: string): Promise<SolicitudConObjeto[]>;
   delObjeto(objetoId: string, usuario: Usuario): Promise<SolicitudConObjeto[]>;
   todas(usuario: Usuario): Promise<SolicitudConObjeto[]>;
@@ -75,6 +76,8 @@ export interface SolicitudesService {
   aprobar(id: string, usuario: Usuario): Promise<void>;
   rechazar(id: string, motivo: string, usuario: Usuario): Promise<void>;
   cancelar(id: string, usuario: Usuario): Promise<void>;
+  listarMensajesEntrega(solicitudId: string): Promise<MensajeEntrega[]>;
+  enviarMensajeEntrega(solicitudId: string, mensaje: string, emisorId: string): Promise<MensajeEntrega>;
 }
 
 export interface NotificacionesService {

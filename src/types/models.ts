@@ -41,6 +41,7 @@ export interface Solicitud {
   objetoId: string;
   solicitanteId: string;
   pruebaPertenencia: string;
+  pruebaImagen?: string;
   estado: EstadoSolicitud;
   motivoRechazo?: string;
   creadoEn: string;
@@ -53,5 +54,13 @@ export interface Notificacion {
   mensaje: string;
   leida: boolean;
   enlace?: string;
+  creadoEn: string;
+}
+
+export interface MensajeEntrega {
+  id: string;
+  solicitudId: string;
+  emisorId: string;
+  mensaje: string;
   creadoEn: string;
 }

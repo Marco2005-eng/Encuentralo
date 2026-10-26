@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Textarea } from '@/components/ui/Textarea';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { comprimirImagen } from '@/lib/imagenes';
 import {
   MapPin,
   Calendar,
@@ -25,6 +26,8 @@ import {
   HelpCircle,
   Edit,
   Trash2,
+  Upload,
+  X,
 } from 'lucide-react';
 
 export const DetalleObjetoPage: React.FC = () => {
@@ -37,6 +40,8 @@ export const DetalleObjetoPage: React.FC = () => {
   const [cargando, setCargando] = useState(true);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [solicitudActiva, setSolicitudActiva] = useState<Solicitud | null>(null);
+  const [imagenPrueba, setImagenPrueba] = useState<string | null>(null);
+  const [subiendoFotoPrueba, setSubiendoFotoPrueba] = useState(false);
 
   const {
     register,
@@ -70,15 +75,35 @@ export const DetalleObjetoPage: React.FC = () => {
   const handleEnviarSolicitud = async (valores: SolicitudValues) => {
     if (!usuario || !objeto) return;
     try {
-      const nueva = await services.solicitudes.crear(objeto.id, valores.pruebaPertenencia, usuario);
+      const nueva = await services.solicitudes.crear(
+        objeto.id,
+        valores.pruebaPertenencia,
+        usuario,
+        imagenPrueba || undefined
+      );
       setSolicitudActiva(nueva);
       mostrarToast('¡Solicitud de recuperación enviada exitosamente!', 'exito');
       setModalAbierto(false);
+      setImagenPrueba(null);
       reset();
       cargarDatos();
     } catch (err: unknown) {
       if (err instanceof Error) mostrarToast(err.message, 'error');
       else mostrarToast('No se pudo enviar la solicitud.', 'error');
+    }
+  };
+
+  const handleFotoPrueba = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSubiendoFotoPrueba(true);
+    try {
+      const base64 = await comprimirImagen(file);
+      setImagenPrueba(base64);
+    } catch {
+      mostrarToast('No se pudo procesar la imagen.', 'error');
+    } finally {
+      setSubiendoFotoPrueba(false);
     }
   };
 
@@ -276,13 +301,50 @@ export const DetalleObjetoPage: React.FC = () => {
 
           <Textarea
             label="Detalles de pertenencia"
-            rows={5}
+            rows={4}
             placeholder="Ejemplo: La mochila tiene una mancha azul pequeña en la correa derecha y dentro guardaba una libreta con espiral rojo..."
             required
             error={errors.pruebaPertenencia?.message}
             ayuda="Mínimo 20 caracteres. Sé lo más preciso posible."
             {...register('pruebaPertenencia')}
           />
+
+          {/* Subir foto de prueba de pertenencia */}
+          <div className="space-y-1.5 text-left">
+            <label className="text-xs font-semibold text-slate-700">
+              Fotografía de comprobación (Opcional)
+            </label>
+            {imagenPrueba ? (
+              <div className="relative inline-block border rounded-xl overflow-hidden bg-slate-100 max-h-40">
+                <img src={imagenPrueba} alt="Foto de prueba de pertenencia" className="max-h-40 object-contain" />
+                <button
+                  type="button"
+                  onClick={() => setImagenPrueba(null)}
+                  className="absolute top-1.5 right-1.5 p-1 rounded-full bg-slate-900/70 text-white hover:bg-slate-900 transition-colors"
+                  aria-label="Quitar fotografía"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center p-3 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+                <Upload className="w-5 h-5 text-slate-400 mb-1" />
+                <span className="text-xs font-medium text-slate-600">
+                  {subiendoFotoPrueba ? 'Cargando...' : 'Adjuntar foto (ej. boleta, foto previa usando el objeto)'}
+                </span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleFotoPrueba}
+                  disabled={subiendoFotoPrueba}
+                />
+              </label>
+            )}
+            <p className="text-[11px] text-slate-400">
+              Si tienes una foto previa con el objeto o comprobante de compra, puedes adjuntarla para una verificación inmediata.
+            </p>
+          </div>
 
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
             <Button type="button" variant="outline" onClick={() => setModalAbierto(false)}>

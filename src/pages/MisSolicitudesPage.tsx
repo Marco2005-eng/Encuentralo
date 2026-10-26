@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { CardSkeleton } from '@/components/ui/Skeleton';
+import { Modal } from '@/components/ui/Modal';
+import { ChatEntrega } from '@/components/objetos/ChatEntrega';
 import { Inbox, ExternalLink, XCircle, Phone, MessageCircle } from 'lucide-react';
 
 export const MisSolicitudesPage: React.FC = () => {
@@ -17,6 +19,7 @@ export const MisSolicitudesPage: React.FC = () => {
 
   const [solicitudes, setSolicitudes] = useState<SolicitudConObjeto[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [chatSolicitud, setChatSolicitud] = useState<{ id: string; nombreObjeto: string } | null>(null);
 
   const cargarSolicitudes = async () => {
     if (!usuario) return;
@@ -123,9 +126,25 @@ export const MisSolicitudesPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Botón cancelar si está pendiente */}
-              {s.estado === 'pendiente' && (
-                <div className="shrink-0 flex items-center justify-end">
+              {/* Botones de acción según estado */}
+              <div className="shrink-0 flex items-center justify-end gap-2">
+                {s.estado === 'aprobada' && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() =>
+                      setChatSolicitud({
+                        id: s.id,
+                        nombreObjeto: s.objeto?.nombre || 'Objeto',
+                      })
+                    }
+                    className="gap-1.5 text-xs font-semibold shadow-xs"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" /> Coordinar Entrega
+                  </Button>
+                )}
+
+                {s.estado === 'pendiente' && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -134,12 +153,27 @@ export const MisSolicitudesPage: React.FC = () => {
                   >
                     <XCircle className="w-4 h-4" /> Cancelar solicitud
                   </Button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           ))}
         </div>
       )}
+
+      {/* Modal Chat de Entrega */}
+      <Modal
+        abierto={Boolean(chatSolicitud)}
+        alCerrar={() => setChatSolicitud(null)}
+        titulo="Coordinar entrega del objeto"
+      >
+        {chatSolicitud && usuario && (
+          <ChatEntrega
+            solicitudId={chatSolicitud.id}
+            nombreObjeto={chatSolicitud.nombreObjeto}
+            usuarioActualId={usuario.id}
+          />
+        )}
+      </Modal>
     </div>
   );
 };

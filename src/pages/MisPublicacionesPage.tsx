@@ -12,7 +12,8 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Modal } from '@/components/ui/Modal';
 import { Textarea } from '@/components/ui/Textarea';
 import { CardSkeleton } from '@/components/ui/Skeleton';
-import { Edit, Trash2, CheckCircle2, XCircle, Eye, MessageSquare, AlertCircle } from 'lucide-react';
+import { ChatEntrega } from '@/components/objetos/ChatEntrega';
+import { Edit, Trash2, CheckCircle2, XCircle, Eye, MessageSquare, AlertCircle, MessageCircle } from 'lucide-react';
 
 export const MisPublicacionesPage: React.FC = () => {
   const { usuario } = useAuth();
@@ -21,6 +22,9 @@ export const MisPublicacionesPage: React.FC = () => {
   const [objetos, setObjetos] = useState<Objeto[]>([]);
   const [solicitudesMap, setSolicitudesMap] = useState<Record<string, SolicitudConObjeto[]>>({});
   const [cargando, setCargando] = useState(true);
+
+  // Modal Chat de entrega
+  const [chatSolicitud, setChatSolicitud] = useState<{ id: string; nombreObjeto: string } | null>(null);
 
   // Modal Rechazo
   const [solicitudParaRechazar, setSolicitudParaRechazar] = useState<string | null>(null);
@@ -194,12 +198,48 @@ export const MisPublicacionesPage: React.FC = () => {
                             <p className="text-xs text-slate-600 italic bg-slate-50 p-2 rounded-lg border border-slate-100">
                               "{s.pruebaPertenencia}"
                             </p>
+                            {s.pruebaImagen && (
+                              <div className="mt-2.5 p-2 bg-slate-50 border border-slate-200 rounded-xl inline-block">
+                                <p className="text-[11px] font-bold text-slate-700 mb-1.5 flex items-center gap-1">
+                                  <span>🧾 Comprobante / Foto de prueba:</span>
+                                </p>
+                                <a
+                                  href={s.pruebaImagen}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="group relative block border rounded-lg overflow-hidden bg-white shadow-xs max-w-xs"
+                                  title="Haz clic para ver la imagen en tamaño completo"
+                                >
+                                  <img
+                                    src={s.pruebaImagen}
+                                    alt="Comprobante o foto de pertenencia"
+                                    className="max-h-48 w-full object-contain group-hover:scale-105 transition-transform duration-200"
+                                  />
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-semibold transition-opacity">
+                                    Ver en tamaño completo ↗
+                                  </div>
+                                </a>
+                              </div>
+                            )}
                             {s.motivoRechazo && (
                               <p className="text-xs text-rose-600">
                                 <strong>Motivo de rechazo:</strong> {s.motivoRechazo}
                               </p>
                             )}
                           </div>
+
+                          {s.estado === 'aprobada' && (
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setChatSolicitud({ id: s.id, nombreObjeto: obj.nombre })}
+                                className="bg-brand-50 border-brand-200 text-brand-700 hover:bg-brand-100 gap-1.5 text-xs font-semibold"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" /> Coordinar Entrega
+                              </Button>
+                            </div>
+                          )}
 
                           {s.estado === 'pendiente' && obj.estado !== 'recuperado' && (
                             <div className="flex items-center gap-2 shrink-0">
@@ -275,6 +315,21 @@ export const MisPublicacionesPage: React.FC = () => {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Modal Chat de Entrega */}
+      <Modal
+        abierto={Boolean(chatSolicitud)}
+        alCerrar={() => setChatSolicitud(null)}
+        titulo="Coordinar entrega del objeto"
+      >
+        {chatSolicitud && usuario && (
+          <ChatEntrega
+            solicitudId={chatSolicitud.id}
+            nombreObjeto={chatSolicitud.nombreObjeto}
+            usuarioActualId={usuario.id}
+          />
+        )}
       </Modal>
     </div>
   );

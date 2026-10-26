@@ -62,15 +62,19 @@ export const supabaseAuthService: AuthService = {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({
-        email: correo,
+        email: correo.trim().toLowerCase(),
         password: contrasena,
       }),
     });
 
     const data = await res.json();
     if (!res.ok) {
+      const msg = data.error_description || data.msg || '';
+      if (msg.toLowerCase().includes('confirm') || msg.toLowerCase().includes('not confirmed')) {
+        throw new Error('Debes confirmar tu correo electrónico antes de ingresar (o desactiva "Confirm email" en Supabase).');
+      }
       throw new Error(
-        data.error_description || data.msg || 'Credenciales incorrectas o usuario no registrado.'
+        'Correo o contraseña incorrectos. Si creaste la cuenta con Google, ingresa con el botón de Google.'
       );
     }
 
