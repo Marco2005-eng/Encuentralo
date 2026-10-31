@@ -156,6 +156,11 @@ export const MisPublicacionesPage: React.FC = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
                   <div className="flex items-center gap-3">
                     <Badge estado={obj.estado} />
+                    {obj.oculto && (
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 inline-flex items-center gap-1">
+                        Oculta por administración
+                      </span>
+                    )}
                     <h2 className="text-lg font-bold text-slate-900">
                       <Link to={`/objetos/${obj.id}`} className="hover:text-brand-600 transition-colors">
                         {obj.nombre}
@@ -189,6 +194,37 @@ export const MisPublicacionesPage: React.FC = () => {
                   <span><strong>Lugar:</strong> {obj.ubicacion}</span>
                   <span><strong>Fecha:</strong> {formatFecha(obj.fecha)}</span>
                 </div>
+
+                {/* Banner de aviso si la publicación está oculta */}
+                {obj.oculto && (
+                  <div className="p-4 bg-amber-50 border border-amber-200/90 rounded-2xl flex flex-col sm:flex-row items-start justify-between gap-3 animate-fade-in">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                      <div className="space-y-1 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-amber-950 uppercase tracking-wider text-[11px]">
+                            Publicación oculta temporalmente para mejoras
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-200 text-amber-900">
+                            En revisión
+                          </span>
+                        </div>
+                        <p className="text-slate-800">
+                          <strong>Motivo indicado por la administración:</strong>{' '}
+                          <span className="font-semibold text-amber-900">"{obj.motivoOculto || 'Requiere mejoras en la información o imagen.'}"</span>
+                        </p>
+                        <p className="text-amber-800 text-[11px]">
+                          Esta publicación no se muestra en el catálogo público mientras esté oculta. Haz clic en <strong>Editar</strong> para realizar las correcciones y reactivarla.
+                        </p>
+                      </div>
+                    </div>
+                    <Link to={`/mis-publicaciones/${obj.id}/editar`} className="shrink-0 self-end sm:self-center">
+                      <Button variant="primary" size="sm" className="bg-amber-600 hover:bg-amber-700 text-white text-xs gap-1.5 shadow-sm">
+                        <Edit className="w-3.5 h-3.5" /> Corregir ahora
+                      </Button>
+                    </Link>
+                  </div>
+                )}
 
                 {/* Sección de solicitudes recibidas para este objeto */}
                 {(() => {

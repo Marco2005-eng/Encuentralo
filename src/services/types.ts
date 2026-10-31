@@ -23,6 +23,7 @@ export interface ObjetoFiltros {
   desde?: string;
   hasta?: string;
   orden?: 'recientes' | 'antiguos';
+  incluirOcultos?: boolean;
 }
 
 export type NuevoObjeto = Omit<Objeto, 'id' | 'estado' | 'publicadoPor' | 'creadoEn' | 'actualizadoEn'>;
@@ -68,6 +69,8 @@ export interface ObjetosService {
   eliminar(id: string, usuario: Usuario): Promise<void>;
   delUsuario(usuarioId: string): Promise<Objeto[]>;
   ubicaciones(): Promise<string[]>;
+  ocultar(id: string, motivo: string, usuario: Usuario): Promise<Objeto>;
+  desocultar(id: string, usuario: Usuario): Promise<Objeto>;
 }
 
 export interface SolicitudesService {

@@ -29,6 +29,8 @@ import {
   Upload,
   X,
   PackageCheck,
+  EyeOff,
+  AlertTriangle,
 } from 'lucide-react';
 
 export const DetalleObjetoPage: React.FC = () => {
@@ -159,8 +161,44 @@ export const DetalleObjetoPage: React.FC = () => {
   const esAdmin = usuario?.rol === 'admin';
   const puedeEditar = esAutor || esAdmin;
 
+  if (objeto.oculto && !puedeEditar) {
+    return (
+      <div className="container-app py-16 max-w-lg text-center">
+        <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-4">
+          <EyeOff className="w-8 h-8" />
+        </div>
+        <h1 className="text-xl font-bold text-slate-900 mb-2">Publicación no disponible</h1>
+        <p className="text-sm text-slate-600 mb-6 leading-relaxed">
+          Esta publicación se encuentra temporalmente en revisión o ha sido ocultada por el autor / administración para mejorar su información.
+        </p>
+        <Link to="/objetos">
+          <Button variant="primary">Volver al catálogo</Button>
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="container-app py-8 max-w-4xl">
+      {/* Aviso si la publicación está oculta para el autor o admin */}
+      {objeto.oculto && (
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200/90 rounded-2xl flex items-start gap-3.5 text-xs text-amber-900 animate-fade-in shadow-sm">
+          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-bold text-sm text-amber-950">
+              Esta publicación está oculta para el público general
+            </p>
+            <p className="text-slate-800">
+              <strong>Motivo indicado por la administración:</strong>{' '}
+              <span className="font-semibold text-amber-900">"{objeto.motivoOculto || 'Requiere mejoras en la información o imagen.'}"</span>
+            </p>
+            <p className="text-amber-800 text-[11px]">
+              Solo tú y el personal administrativo pueden acceder a esta vista. Haz clic en <strong>Editar</strong> para corregir los datos solicitados.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Botón Volver */}
       <div className="mb-6 flex items-center justify-between">
         <button

@@ -32,8 +32,13 @@ export const IniciarSesionPage: React.FC = () => {
   const onSubmit = async (valores: LoginValues) => {
     setErrorGlobal(null);
     try {
-      await iniciarSesion(valores.correo, valores.contrasena);
-      mostrarToast('¡Sesión iniciada correctamente!', 'exito');
+      const u = await iniciarSesion(valores.correo, valores.contrasena);
+      const estaBaneado = Boolean(u?.baneadoHasta && new Date(u.baneadoHasta) > new Date());
+      if (estaBaneado) {
+        mostrarToast('Ingresaste en modo restringido. Revisa el aviso de suspensión.', 'info');
+      } else {
+        mostrarToast('¡Sesión iniciada correctamente!', 'exito');
+      }
       navigate(from, { replace: true });
     } catch (err: unknown) {
       if (err instanceof Error) setErrorGlobal(err.message);

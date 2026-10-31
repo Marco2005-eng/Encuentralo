@@ -4,11 +4,19 @@ import { useToast } from '@/context/ToastContext';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { formatFecha } from '@/lib/fechas';
-import { Mail, Shield, Save, CheckCircle2, Lock, KeyRound } from 'lucide-react';
+import { Mail, Shield, Save, CheckCircle2, Lock, KeyRound, ShieldAlert } from 'lucide-react';
 import { REQUISITOS_CONTRASENA } from '@/lib/validaciones';
 
 export const PerfilPage: React.FC = () => {
-  const { usuario, actualizarPerfil, asignarContrasena } = useAuth();
+  const {
+    usuario,
+    actualizarPerfil,
+    asignarContrasena,
+    estaSuspendido,
+    motivoSuspension,
+    fechaFinSuspension,
+    abrirModalSuspension,
+  } = useAuth();
   const { mostrarToast } = useToast();
 
   const [nombre, setNombre] = useState(usuario?.nombre || '');
@@ -108,6 +116,33 @@ export const PerfilPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Alerta de cuenta suspendida si corresponde */}
+        {estaSuspendido && (
+          <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-700 uppercase tracking-wider">
+                <ShieldAlert className="w-4 h-4 text-rose-600" />
+                Estado de la cuenta: Suspendida
+              </span>
+              <p className="text-xs text-rose-900 font-medium">
+                Motivo: <strong>{motivoSuspension}</strong>
+              </p>
+              <p className="text-[11px] text-rose-700">
+                Hasta el {fechaFinSuspension ? formatFecha(fechaFinSuspension) : 'próximo aviso'}.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={abrirModalSuspension}
+              className="text-rose-700 border-rose-300 hover:bg-rose-100 text-xs shrink-0 self-start sm:self-auto"
+            >
+              Ver detalles de sanción
+            </Button>
+          </div>
+        )}
 
         {/* Formulario de Edición */}
         <form onSubmit={handleSubmit} className="space-y-6">

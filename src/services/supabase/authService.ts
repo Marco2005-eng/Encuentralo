@@ -6,6 +6,7 @@ import {
   guardarSesionLocal,
   obtenerSesionLocal,
 } from './client';
+import { supabaseNotificacionesService } from './notificacionesService';
 
 export const supabaseAuthService: AuthService = {
   async registrar({ nombre, correo, contrasena }): Promise<Usuario> {
@@ -81,12 +82,37 @@ export const supabaseAuthService: AuthService = {
     guardarSesionLocal(data);
     const user = data.user;
 
+    let rolReal: 'usuario' | 'admin' = (user.user_metadata?.rol as 'usuario' | 'admin') || 'usuario';
+    let nombreReal = user.user_metadata?.nombre || user.user_metadata?.full_name || 'Usuario';
+    let telefonoReal = user.user_metadata?.telefono || undefined;
+    let baneadoHastaReal: string | null = null;
+    let motivoBaneoReal: string | null = null;
+
+    try {
+      const perfilRes = await fetch(`${SUPABASE_URL}/rest/v1/perfiles?id=eq.${user.id}&select=*`, {
+        headers: getAuthHeaders(data.access_token),
+      });
+      if (perfilRes.ok) {
+        const perfiles = await perfilRes.json();
+        if (perfiles && perfiles.length > 0) {
+          if (perfiles[0].rol) rolReal = perfiles[0].rol;
+          if (perfiles[0].nombre) nombreReal = perfiles[0].nombre;
+          if (perfiles[0].telefono) telefonoReal = perfiles[0].telefono;
+          if (perfiles[0].baneado_hasta) baneadoHastaReal = perfiles[0].baneado_hasta;
+          if (perfiles[0].motivo_baneo) motivoBaneoReal = perfiles[0].motivo_baneo;
+        }
+      }
+    } catch {}
+
     return {
       id: user.id,
-      nombre: user.user_metadata?.nombre || user.user_metadata?.full_name || 'Usuario',
+      nombre: nombreReal,
       correo: user.email || correo,
-      rol: (user.user_metadata?.rol as 'usuario' | 'admin') || 'usuario',
+      telefono: telefonoReal,
+      rol: rolReal,
       creadoEn: user.created_at || new Date().toISOString(),
+      baneadoHasta: baneadoHastaReal,
+      motivoBaneo: motivoBaneoReal,
     };
   },
 
@@ -316,6 +342,12 @@ export const supabaseAuthService: AuthService = {
         motivo_baneo: motivo.trim(),
       }),
     });
+
+    const fechaFormateada = fechaFin.toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
+    await supabaseNotificacionesService.crear(
+      usuarioId,
+      `Tu cuenta ha sido suspendida hasta el ${fechaFormateada}. Motivo: ${motivo.trim()}. Las funciones de publicar y solicitar objetos quedan restringidas.`
+    );
   },
 
   async quitarSuspension(usuarioId: string, admin: Usuario): Promise<void> {
@@ -329,5 +361,10 @@ export const supabaseAuthService: AuthService = {
         motivo_baneo: null,
       }),
     });
+
+    await supabaseNotificacionesService.crear(
+      usuarioId,
+      'Tu cuenta institucional ha sido reactivada. Ya puedes volver a publicar reportes y enviar solicitudes de objetos.'
+    );
   },
 };

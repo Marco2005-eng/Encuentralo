@@ -2,6 +2,7 @@ import type { Objeto, Usuario } from '@/types/models';
 import type { ObjetosService, ObjetoFiltros, NuevoObjeto } from '@/services/types';
 import { SUPABASE_URL, SUPABASE_ANON_KEY, obtenerSesionLocal } from './client';
 import { subirImagenASupabaseStorage } from './storageService';
+import { supabaseNotificacionesService } from './notificacionesService';
 
 function getHeaders(token?: string) {
   const sesion = obtenerSesionLocal();
@@ -27,6 +28,8 @@ function formatearObjeto(o: any): Objeto {
     publicadoPor: o.publicado_por,
     creadoEn: o.creado_en,
     actualizadoEn: o.actualizado_en,
+    oculto: Boolean(o.oculto),
+    motivoOculto: o.motivo_oculto || undefined,
   };
 }
 
@@ -55,6 +58,9 @@ export const supabaseObjetosService: ObjetosService = {
     }
     if (filtros?.hasta) {
       params.set('fecha', `lte.${filtros.hasta}`);
+    }
+    if (!filtros?.incluirOcultos) {
+      params.set('oculto', 'neq.true');
     }
 
     const res = await fetch(`${SUPABASE_URL}/rest/v1/objetos?${params.toString()}`, {
@@ -225,5 +231,67 @@ export const supabaseObjetosService: ObjetosService = {
     const datos: any[] = await res.json();
     const setUbicaciones = new Set(datos.map((d: any) => d.ubicacion));
     return Array.from(setUbicaciones);
+  },
+
+  async ocultar(id: string, motivo: string, _usuario: Usuario): Promise<Objeto> {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/objetos?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: {
+        ...getHeaders(),
+        'Prefer': 'return=representation',
+      },
+      body: JSON.stringify({
+        oculto: true,
+        motivo_oculto: motivo.trim(),
+        actualizado_en: new Date().toISOString(),
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error('No se pudo ocultar la publicación en Supabase.');
+    }
+
+    const actualizados: any[] = await res.json();
+    const obj = formatearObjeto(actualizados[0]);
+
+    // Notificar al autor
+    await supabaseNotificacionesService.crear(
+      obj.publicadoPor,
+      `Tu publicación "${obj.nombre}" ha sido ocultada por la administración. Motivo: ${motivo.trim()}. Por favor edítala para mejorarla.`,
+      `/mis-publicaciones/${obj.id}/editar`
+    );
+
+    return obj;
+  },
+
+  async desocultar(id: string, _usuario: Usuario): Promise<Objeto> {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/objetos?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: {
+        ...getHeaders(),
+        'Prefer': 'return=representation',
+      },
+      body: JSON.stringify({
+        oculto: false,
+        motivo_oculto: null,
+        actualizado_en: new Date().toISOString(),
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error('No se pudo reactivar la publicación en Supabase.');
+    }
+
+    const actualizados: any[] = await res.json();
+    const obj = formatearObjeto(actualizados[0]);
+
+    // Notificar al autor
+    await supabaseNotificacionesService.crear(
+      obj.publicadoPor,
+      `Tu publicación "${obj.nombre}" ha sido reactivada y ya es visible públicamente en el catálogo.`,
+      `/objetos/${obj.id}`
+    );
+
+    return obj;
   },
 };

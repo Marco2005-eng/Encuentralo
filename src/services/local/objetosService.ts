@@ -2,6 +2,7 @@ import type { Objeto, Usuario } from '@/types/models';
 import { ServiceError, type ObjetosService } from '@/services/types';
 import { ahora, escribir, latencia, leer, nuevoId } from './storage';
 import { OBJETOS_SEED, USUARIOS_SEED, SOLICITUDES_SEED } from './seed';
+import { notificacionesService } from './notificacionesService';
 
 export function inicializarStorageSiVacio(): void {
   const usuarios = leer('usuarios');
@@ -51,6 +52,9 @@ export const objetosService: ObjetosService = {
     }
     if (filtros?.hasta) {
       lista = lista.filter((o) => o.fecha <= filtros.hasta!);
+    }
+    if (!filtros?.incluirOcultos) {
+      lista = lista.filter((o) => !o.oculto);
     }
 
     if (filtros?.orden === 'antiguos') {
@@ -156,5 +160,66 @@ export const objetosService: ObjetosService = {
     const lista = leer('objetos');
     const setUbicaciones = new Set(lista.map((o) => o.ubicacion));
     return Array.from(setUbicaciones);
+  },
+
+  async ocultar(id, motivo, usuario) {
+    await latencia();
+    inicializarStorageSiVacio();
+    const lista = leer('objetos');
+    const index = lista.findIndex((o) => o.id === id);
+    if (index === -1) throw new ServiceError('El objeto especificado no existe.');
+
+    const obj = lista[index];
+    if (usuario.rol !== 'admin' && obj.publicadoPor !== usuario.id) {
+      throw new ServiceError('No tienes permiso para ocultar esta publicación.');
+    }
+
+    const actualizado: Objeto = {
+      ...obj,
+      oculto: true,
+      motivoOculto: motivo.trim(),
+      actualizadoEn: ahora(),
+    };
+    lista[index] = actualizado;
+    escribir('objetos', lista);
+
+    // Notificar al autor
+    await notificacionesService.crear(
+      obj.publicadoPor,
+      `Tu publicación "${obj.nombre}" ha sido ocultada por la administración. Motivo: ${motivo.trim()}. Por favor edítala para mejorarla.`,
+      `/mis-publicaciones/${obj.id}/editar`
+    );
+
+    return actualizado;
+  },
+
+  async desocultar(id, usuario) {
+    await latencia();
+    inicializarStorageSiVacio();
+    const lista = leer('objetos');
+    const index = lista.findIndex((o) => o.id === id);
+    if (index === -1) throw new ServiceError('El objeto especificado no existe.');
+
+    const obj = lista[index];
+    if (usuario.rol !== 'admin' && obj.publicadoPor !== usuario.id) {
+      throw new ServiceError('No tienes permiso para reactivar esta publicación.');
+    }
+
+    const actualizado: Objeto = {
+      ...obj,
+      oculto: false,
+      motivoOculto: undefined,
+      actualizadoEn: ahora(),
+    };
+    lista[index] = actualizado;
+    escribir('objetos', lista);
+
+    await notificacionesService.crear(
+      obj.publicadoPor,
+      `Tu publicación "${obj.nombre}" ha sido reactivada y ya es visible públicamente en el catálogo.`,
+      `/objetos/${obj.id}`
+    );
+
+    return actualizado;
   },
 };

@@ -36,6 +36,8 @@ export interface Objeto {
   publicadoPor: string;
   creadoEn: string;
   actualizadoEn: string;
+  oculto?: boolean;
+  motivoOculto?: string;
 }
 
 export interface Solicitud {

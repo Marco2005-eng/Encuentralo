@@ -43,6 +43,13 @@ export const AdminPage: React.FC = () => {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [cargando, setCargando] = useState(true);
 
+  // Estados para filtro y búsqueda en Publicaciones
+  const [busquedaPub, setBusquedaPub] = useState('');
+  const [filtroVisibilidadPub, setFiltroVisibilidadPub] = useState<'todas' | 'visibles' | 'ocultas'>('todas');
+  const [objetoParaOcultar, setObjetoParaOcultar] = useState<Objeto | null>(null);
+  const [motivoOcultarPub, setMotivoOcultarPub] = useState('');
+  const [procesandoOcultarPub, setProcesandoOcultarPub] = useState(false);
+
   // Estados para filtro y búsqueda en Solicitudes
   const [busquedaSolicitud, setBusquedaSolicitud] = useState('');
   const [filtroEstadoSolicitud, setFiltroEstadoSolicitud] = useState<'todas' | 'pendiente' | 'aprobada' | 'rechazada' | 'ocultas'>('todas');
@@ -66,7 +73,7 @@ export const AdminPage: React.FC = () => {
     try {
       const [stats, objs, sols, users] = await Promise.all([
         services.estadisticas.resumen(),
-        services.objetos.listar(),
+        services.objetos.listar({ incluirOcultos: true }),
         services.solicitudes.todas(usuario),
         services.auth.listarUsuarios(usuario),
       ]);
@@ -103,6 +110,39 @@ export const AdminPage: React.FC = () => {
       try {
         await services.objetos.eliminar(id, usuario);
         mostrarToast('Objeto eliminado.', 'exito');
+        cargarAdminData();
+      } catch (err: unknown) {
+        if (err instanceof Error) mostrarToast(err.message, 'error');
+      }
+    }
+  };
+
+  const handleOcultarObjeto = async () => {
+    if (!usuario || !objetoParaOcultar) return;
+    if (!motivoOcultarPub.trim()) {
+      mostrarToast('Debes indicar el motivo para ocultar la publicación.', 'error');
+      return;
+    }
+    setProcesandoOcultarPub(true);
+    try {
+      await services.objetos.ocultar(objetoParaOcultar.id, motivoOcultarPub, usuario);
+      mostrarToast('Publicación ocultada temporalmente y se notificó al usuario.', 'exito');
+      setObjetoParaOcultar(null);
+      setMotivoOcultarPub('');
+      cargarAdminData();
+    } catch (err: unknown) {
+      if (err instanceof Error) mostrarToast(err.message, 'error');
+    } finally {
+      setProcesandoOcultarPub(false);
+    }
+  };
+
+  const handleDesocultarObjeto = async (obj: Objeto) => {
+    if (!usuario) return;
+    if (window.confirm(`¿Reactivar la publicación "${obj.nombre}" y hacerla visible en el catálogo?`)) {
+      try {
+        await services.objetos.desocultar(obj.id, usuario);
+        mostrarToast('Publicación reactivada y visible nuevamente en el catálogo.', 'exito');
         cargarAdminData();
       } catch (err: unknown) {
         if (err instanceof Error) mostrarToast(err.message, 'error');
@@ -191,6 +231,21 @@ export const AdminPage: React.FC = () => {
       </div>
     );
   }
+
+  // Filtrado de publicaciones para Admin
+  const objetosFiltrados = objetos.filter((o) => {
+    if (filtroVisibilidadPub === 'visibles' && o.oculto) return false;
+    if (filtroVisibilidadPub === 'ocultas' && !o.oculto) return false;
+    if (busquedaPub.trim()) {
+      const q = busquedaPub.toLowerCase();
+      const matchNombre = o.nombre.toLowerCase().includes(q);
+      const matchDesc = o.descripcion.toLowerCase().includes(q);
+      const matchLugar = o.ubicacion.toLowerCase().includes(q);
+      const matchMotivo = (o.motivoOculto || '').toLowerCase().includes(q);
+      return matchNombre || matchDesc || matchLugar || matchMotivo;
+    }
+    return true;
+  });
 
   // Filtrado de solicitudes para Admin
   const solicitudesFiltradas = solicitudes.filter((s) => {
@@ -388,50 +443,171 @@ export const AdminPage: React.FC = () => {
 
       {/* SECCIÓN 2: PUBLICACIONES SUPERVISADAS */}
       {seccionActiva === 'publicaciones' && (
-        <div className="card p-6 overflow-hidden">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-bold text-slate-900">
-              Todas las publicaciones ({objetos.length})
-            </h2>
+        <div className="card p-6 space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                Supervisión de publicaciones ({objetos.length})
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Supervisa los reportes del campus. Si una publicación necesita mejoras o incumple normas, puedes ocultarla y notificar al autor.
+              </p>
+            </div>
+
+            {/* Búsqueda en Publicaciones */}
+            <div className="relative w-full md:w-72">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Buscar por objeto, lugar o motivo..."
+                value={busquedaPub}
+                onChange={(e) => setBusquedaPub(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-slate-50"
+              />
+              {busquedaPub && (
+                <button
+                  type="button"
+                  onClick={() => setBusquedaPub('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[620px] text-left text-xs sm:text-sm">
+
+          {/* Filtros de visibilidad */}
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 text-xs">
+            <span className="font-semibold text-slate-500 mr-1">Filtrar:</span>
+            <button
+              type="button"
+              onClick={() => setFiltroVisibilidadPub('todas')}
+              className={`px-3 py-1 rounded-full font-bold transition-all ${
+                filtroVisibilidadPub === 'todas'
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Todas ({objetos.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFiltroVisibilidadPub('visibles')}
+              className={`px-3 py-1 rounded-full font-bold transition-all ${
+                filtroVisibilidadPub === 'visibles'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+              }`}
+            >
+              Visibles ({objetos.filter((o) => !o.oculto).length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFiltroVisibilidadPub('ocultas')}
+              className={`px-3 py-1 rounded-full font-bold transition-all ${
+                filtroVisibilidadPub === 'ocultas'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
+              }`}
+            >
+              Ocultas para mejoras ({objetos.filter((o) => o.oculto).length})
+            </button>
+          </div>
+
+          <div className="overflow-x-auto pt-2">
+            <table className="w-full min-w-[680px] text-left text-xs sm:text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500 font-semibold">
                   <th className="pb-3 pr-4">Objeto</th>
                   <th className="pb-3 pr-4">Categoría</th>
                   <th className="pb-3 pr-4">Estado</th>
+                  <th className="pb-3 pr-4">Visibilidad</th>
                   <th className="pb-3 pr-4">Lugar</th>
                   <th className="pb-3 pr-4">Fecha</th>
-                  <th className="pb-3 text-right">Acción</th>
+                  <th className="pb-3 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {objetos.map((obj) => (
-                  <tr key={obj.id} className="hover:bg-slate-50">
-                    <td className="py-3 pr-4 font-semibold text-slate-900">
-                      <a href={`/objetos/${obj.id}`} className="hover:text-brand-600">
-                        {obj.nombre}
-                      </a>
-                    </td>
-                    <td className="py-3 pr-4 text-slate-600">{CATEGORIA_LABEL[obj.categoria]}</td>
-                    <td className="py-3 pr-4">
-                      <Badge estado={obj.estado} />
-                    </td>
-                    <td className="py-3 pr-4 text-slate-600">{obj.ubicacion}</td>
-                    <td className="py-3 pr-4 text-slate-500">{formatFecha(obj.fecha)}</td>
-                    <td className="py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => handleEliminarObjeto(obj.id)}
-                        className="text-rose-600 hover:text-rose-800 p-1.5 rounded-lg hover:bg-rose-50"
-                        title="Eliminar publicación"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                {objetosFiltrados.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-slate-400 text-xs">
+                      No se encontraron publicaciones con los filtros seleccionados.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  objetosFiltrados.map((obj) => (
+                    <tr key={obj.id} className={`hover:bg-slate-50 transition-colors ${obj.oculto ? 'bg-amber-50/20' : ''}`}>
+                      <td className="py-3 pr-4 font-semibold text-slate-900">
+                        <a href={`/objetos/${obj.id}`} className="hover:text-brand-600 hover:underline">
+                          {obj.nombre}
+                        </a>
+                      </td>
+                      <td className="py-3 pr-4 text-slate-600">{CATEGORIA_LABEL[obj.categoria]}</td>
+                      <td className="py-3 pr-4">
+                        <Badge estado={obj.estado} />
+                      </td>
+                      <td className="py-3 pr-4">
+                        {obj.oculto ? (
+                          <div>
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 inline-flex items-center gap-1">
+                              <EyeOff className="w-3 h-3" /> Oculta
+                            </span>
+                            {obj.motivoOculto && (
+                              <p className="text-[10px] text-amber-800 font-medium mt-0.5 max-w-[200px] truncate" title={obj.motivoOculto}>
+                                Motivo: {obj.motivoOculto}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 inline-flex items-center gap-1">
+                            <Eye className="w-3 h-3" /> Visible
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 pr-4 text-slate-600">{obj.ubicacion}</td>
+                      <td className="py-3 pr-4 text-slate-500">{formatFecha(obj.fecha)}</td>
+                      <td className="py-3 text-right">
+                        <div className="inline-flex items-center gap-1.5 justify-end">
+                          {/* Botón Ocultar / Desocultar */}
+                          {obj.oculto ? (
+                            <button
+                              type="button"
+                              onClick={() => handleDesocultarObjeto(obj)}
+                              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors inline-flex items-center gap-1"
+                              title="Hacer visible nuevamente en el catálogo"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">Reactivar</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setObjetoParaOcultar(obj);
+                                setMotivoOcultarPub('');
+                              }}
+                              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition-colors inline-flex items-center gap-1"
+                              title="Ocultar publicación para que sea mejorada"
+                            >
+                              <EyeOff className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">Ocultar</span>
+                            </button>
+                          )}
+
+                          {/* Botón Eliminar */}
+                          <button
+                            type="button"
+                            onClick={() => handleEliminarObjeto(obj.id)}
+                            className="text-rose-600 hover:text-rose-800 p-1.5 rounded-lg hover:bg-rose-50 transition-colors"
+                            title="Eliminar publicación definitivamente"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -889,6 +1065,84 @@ export const AdminPage: React.FC = () => {
             <div className="flex items-center justify-end pt-3 border-t border-slate-100">
               <Button variant="outline" size="sm" onClick={() => setSolicitudDetalle(null)}>
                 Cerrar
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* MODAL OCULTAR PUBLICACIÓN PARA MEJORAS */}
+      {objetoParaOcultar && (
+        <Modal
+          abierto={Boolean(objetoParaOcultar)}
+          alCerrar={() => setObjetoParaOcultar(null)}
+          titulo="Ocultar publicación para que sea mejorada"
+        >
+          <div className="space-y-4 text-slate-800">
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2.5">
+              <EyeOff className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold">
+                  Ocultando: "{objetoParaOcultar.nombre}"
+                </p>
+                <p className="mt-0.5 text-amber-800">
+                  Esta publicación dejará de verse en el catálogo público. Su autor recibirá una notificación automática con el motivo que ingreses abajo para que pueda editarla y mejorarla.
+                </p>
+              </div>
+            </div>
+
+            {/* Presets sugeridos */}
+            <div>
+              <span className="text-[11px] font-bold text-slate-600 block mb-1.5 uppercase tracking-wider">
+                Motivos frecuentes (haz clic para autocompletar):
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  'Fotografía borrosa o poco nítida; por favor adjunta una imagen más clara.',
+                  'Falta especificar la ubicación exacta o pabellón del campus.',
+                  'Descripción incompleta o ambigua; agrega más detalles para reconocerlo.',
+                  'Contiene datos privados o números en el texto que deben ser retirados por seguridad.',
+                ].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setMotivoOcultarPub(preset)}
+                    className="text-[11px] px-2.5 py-1 bg-slate-100 hover:bg-brand-50 hover:text-brand-700 rounded-lg border border-slate-200 transition-colors text-left"
+                  >
+                    + {preset.split(';')[0]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Motivo escrito */}
+            <Textarea
+              label="Motivo por el que se oculta (visible para el autor) *"
+              placeholder="Indica qué necesita mejorar o corregir el usuario en su publicación..."
+              value={motivoOcultarPub}
+              onChange={(e) => setMotivoOcultarPub(e.target.value)}
+              rows={3}
+              required
+            />
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setObjetoParaOcultar(null)}
+                disabled={procesandoOcultarPub}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleOcultarObjeto}
+                cargando={procesandoOcultarPub}
+                disabled={!motivoOcultarPub.trim()}
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                Confirmar y notificar al autor
               </Button>
             </div>
           </div>

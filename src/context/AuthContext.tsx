@@ -8,6 +8,9 @@ interface AuthContextType {
   estaSuspendido: boolean;
   motivoSuspension: string | null;
   fechaFinSuspension: string | null;
+  mostrarModalSuspension: boolean;
+  abrirModalSuspension: () => void;
+  cerrarModalSuspension: () => void;
   iniciarSesion: (correo: string, contrasena: string) => Promise<Usuario>;
   iniciarSesionConGoogle: () => Promise<void>;
   registrar: (datos: { nombre: string; correo: string; contrasena: string }) => Promise<Usuario>;
@@ -78,6 +81,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const motivoSuspension = estaSuspendido ? (usuario?.motivoBaneo || 'Infracción a las normas del campus') : null;
   const fechaFinSuspension = estaSuspendido && usuario?.baneadoHasta ? usuario.baneadoHasta : null;
 
+  const [mostrarModalSuspension, setMostrarModalSuspension] = useState(false);
+  const [modalYaVisto, setModalYaVisto] = useState(false);
+
+  useEffect(() => {
+    if (estaSuspendido && !modalYaVisto) {
+      setMostrarModalSuspension(true);
+      setModalYaVisto(true);
+    }
+    if (!estaSuspendido) {
+      setMostrarModalSuspension(false);
+      setModalYaVisto(false);
+    }
+  }, [estaSuspendido, modalYaVisto]);
+
+  const abrirModalSuspension = () => setMostrarModalSuspension(true);
+  const cerrarModalSuspension = () => setMostrarModalSuspension(false);
+
   return (
     <AuthContext.Provider
       value={{
@@ -86,6 +106,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         estaSuspendido,
         motivoSuspension,
         fechaFinSuspension,
+        mostrarModalSuspension,
+        abrirModalSuspension,
+        cerrarModalSuspension,
         iniciarSesion,
         iniciarSesionConGoogle,
         registrar,

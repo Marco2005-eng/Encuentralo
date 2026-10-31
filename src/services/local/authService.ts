@@ -1,6 +1,7 @@
 import type { Usuario } from '@/types/models';
 import { ServiceError, type AuthService } from '@/services/types';
 import { ahora, escribir, escribirValor, latencia, leer, leerValor, nuevoId, type UsuarioGuardado } from './storage';
+import { notificacionesService } from './notificacionesService';
 
 const SESION = 'sesion';
 
@@ -31,14 +32,8 @@ export const authService: AuthService = {
     // Mensaje genérico: no revela si el correo existe.
     if (!u) throw new ServiceError('Correo o contraseña incorrectos. Revisa los datos e inténtalo de nuevo.');
     
-    // Verificar si está suspendido
-    if (u.baneadoHasta && new Date(u.baneadoHasta) > new Date()) {
-      const fecha = new Date(u.baneadoHasta).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
-      throw new ServiceError(
-        `Tu cuenta se encuentra suspendida hasta el ${fecha}. Motivo: ${u.motivoBaneo || 'Infracción a las normas de convivencia'}.`
-      );
-    }
-
+    // Si está suspendido, se permite el acceso en modo restringido para que el usuario
+    // pueda ver el aviso detallado, las notificaciones y el motivo de su sanción en la plataforma.
     escribirValor(SESION, u.id);
     return publico(u);
   },
@@ -127,6 +122,13 @@ export const authService: AuthService = {
       motivoBaneo: motivo.trim(),
     };
     escribir('usuarios', usuarios);
+
+    // Enviar notificación al usuario sancionado
+    const fechaFormateada = fechaFin.toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
+    await notificacionesService.crear(
+      usuarioId,
+      `Tu cuenta ha sido suspendida hasta el ${fechaFormateada}. Motivo: ${motivo.trim()}. Las funciones de publicar y solicitar objetos quedan restringidas.`
+    );
   },
 
   async quitarSuspension(usuarioId: string, admin: Usuario): Promise<void> {
@@ -142,6 +144,11 @@ export const authService: AuthService = {
       motivoBaneo: null,
     };
     escribir('usuarios', usuarios);
+
+    await notificacionesService.crear(
+      usuarioId,
+      'Tu cuenta institucional ha sido reactivada. Ya puedes volver a publicar reportes y enviar solicitudes de objetos.'
+    );
   },
 };
 
