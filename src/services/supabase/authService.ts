@@ -5,6 +5,7 @@ import {
   getAuthHeaders,
   guardarSesionLocal,
   obtenerSesionLocal,
+  refrescarTokenSupabase,
 } from './client';
 import { supabaseNotificacionesService } from './notificacionesService';
 
@@ -152,7 +153,13 @@ export const supabaseAuthService: AuthService = {
 
         if (res.ok) {
           const user = await res.json();
-          guardarSesionLocal({ access_token: accessToken, refresh_token: refreshToken, user });
+          const expiresIn = Number(hashParams.get('expires_in')) || 3600;
+          guardarSesionLocal({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+            expires_in: expiresIn,
+            user,
+          });
 
           // Consultar el rol real en public.perfiles
           let rolReal: 'usuario' | 'admin' = (user.user_metadata?.rol as 'usuario' | 'admin') || 'usuario';
@@ -188,13 +195,36 @@ export const supabaseAuthService: AuthService = {
     }
 
     // 2. Sesión guardada previamente
-    const sesion = obtenerSesionLocal();
+    let sesion = obtenerSesionLocal();
+    if (!sesion?.access_token) return null;
+
+    // Verificar si el token está por expirar o ya expiró y renovarlo proactivamente
+    if (sesion.expires_at) {
+      const ahoraSegundos = Math.floor(Date.now() / 1000);
+      if (ahoraSegundos >= sesion.expires_at - 120 && sesion.refresh_token) {
+        await refrescarTokenSupabase();
+        sesion = obtenerSesionLocal();
+      }
+    }
+
     if (!sesion?.access_token) return null;
 
     try {
-      const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-        headers: getAuthHeaders(sesion.access_token),
+      let tokenActual = sesion.access_token;
+      let res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: getAuthHeaders(tokenActual),
       });
+
+      // Si el access_token expiró (401), intentar renovarlo con el refresh_token
+      if (res.status === 401 && sesion.refresh_token) {
+        const nuevoToken = await refrescarTokenSupabase();
+        if (nuevoToken) {
+          tokenActual = nuevoToken;
+          res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+            headers: getAuthHeaders(tokenActual),
+          });
+        }
+      }
 
       if (!res.ok) {
         guardarSesionLocal(null);
@@ -212,7 +242,7 @@ export const supabaseAuthService: AuthService = {
 
       try {
         const perfilRes = await fetch(`${SUPABASE_URL}/rest/v1/perfiles?id=eq.${user.id}&select=*`, {
-          headers: getAuthHeaders(sesion.access_token),
+          headers: getAuthHeaders(tokenActual),
         });
         if (perfilRes.ok) {
           const perfiles = await perfilRes.json();

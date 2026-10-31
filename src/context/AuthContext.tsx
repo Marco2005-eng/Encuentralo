@@ -39,6 +39,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     refrescarSesion();
+
+    // Sincronización automática entre pestañas del mismo navegador (IHC Consistencia)
+    const sincronizarEntrePestanas = (e: StorageEvent) => {
+      if (
+        e.key === 'encuentralo:supabase_session' ||
+        e.key === 'encuentralo:sesion' ||
+        e.key === null
+      ) {
+        refrescarSesion();
+      }
+    };
+
+    window.addEventListener('storage', sincronizarEntrePestanas);
+
+    // Verificación y renovación proactiva de token en segundo plano cada 4 minutos
+    const intervalRefresco = setInterval(async () => {
+      try {
+        await services.auth.usuarioActual();
+      } catch {}
+    }, 4 * 60 * 1000);
+
+    return () => {
+      window.removeEventListener('storage', sincronizarEntrePestanas);
+      clearInterval(intervalRefresco);
+    };
   }, []);
 
   const iniciarSesion = async (correo: string, contrasena: string) => {
