@@ -224,15 +224,36 @@ export const DetalleObjetoPage: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 card p-4 sm:p-6 md:p-8">
-        {/* Imagen o Placeholder */}
+        {/* Imagen o Placeholder: vista completa y natural integrada al contenedor */}
         <div className="flex flex-col gap-3">
-          <div className="w-full h-64 sm:h-80 md:h-96 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden">
+          <div className="relative w-full h-72 sm:h-80 md:h-96 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-center overflow-hidden">
             {objeto.imagen ? (
-              <img
-                src={objeto.imagen}
-                alt={objeto.nombre}
-                className="w-full h-full object-cover"
-              />
+              <>
+                <div
+                  className="absolute inset-0 bg-cover bg-center blur-2xl opacity-30 scale-125 pointer-events-none"
+                  style={{ backgroundImage: `url(${objeto.imagen})` }}
+                  aria-hidden="true"
+                />
+                <div
+                  className="relative z-10 w-full h-full flex items-center justify-center p-4 sm:p-6"
+                  style={{
+                    WebkitMaskImage:
+                      'radial-gradient(ellipse 90% 90% at 50% 50%, black 68%, transparent 100%)',
+                    maskImage:
+                      'radial-gradient(ellipse 90% 90% at 50% 50%, black 68%, transparent 100%)',
+                  }}
+                >
+                  <img
+                    src={objeto.imagen}
+                    alt={objeto.nombre}
+                    className="max-h-full max-w-full object-contain rounded-xl"
+                  />
+                </div>
+                <div
+                  className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-slate-50 via-slate-50/40 to-transparent z-10 pointer-events-none"
+                  aria-hidden="true"
+                />
+              </>
             ) : (
               <div className="flex flex-col items-center gap-2 text-slate-400">
                 <ImageIcon className="w-16 h-16 stroke-1" />

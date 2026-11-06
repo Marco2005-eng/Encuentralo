@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { services } from '@/services';
@@ -16,6 +16,7 @@ import {
   User,
   MessageCircle,
   HelpCircle,
+  ChevronDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useChat } from '@/context/ChatContext';
@@ -28,9 +29,46 @@ export const Header: React.FC = () => {
   const navigate = useNavigate();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [campanaAbierta, setCampanaAbierta] = useState(false);
-  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [panelChatAbierto, setPanelChatAbierto] = useState(false);
+  const [menuUsuarioAbierto, setMenuUsuarioAbierto] = useState(false);
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [chatsActivos, setChatsActivos] = useState<{ id: string; titulo: string }[]>([]);
+
+  const campanaRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
+  const menuUsuarioRef = useRef<HTMLDivElement>(null);
+
+  // Cerrar menús al hacer clic fuera o presionar Esc (Criterio IHC: Control y prevención de errores)
+  useEffect(() => {
+    const handleClickAfuera = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (campanaRef.current && !campanaRef.current.contains(target)) {
+        setCampanaAbierta(false);
+      }
+      if (chatRef.current && !chatRef.current.contains(target)) {
+        setPanelChatAbierto(false);
+      }
+      if (menuUsuarioRef.current && !menuUsuarioRef.current.contains(target)) {
+        setMenuUsuarioAbierto(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setCampanaAbierta(false);
+        setPanelChatAbierto(false);
+        setMenuUsuarioAbierto(false);
+        setMenuAbierto(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickAfuera);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickAfuera);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   const cargarNotificaciones = async () => {
     if (!usuario) return;
@@ -130,202 +168,296 @@ export const Header: React.FC = () => {
   };
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-      isActive ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+    `inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${
+      isActive
+        ? 'bg-brand-50 text-brand-700 font-semibold'
+        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
     }`;
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
-      <div className="container-app flex h-16 items-center justify-between">
-        {/* Logo */}
-        <Link
-          to="/"
-          className="flex items-center gap-2.5 text-brand-700 font-extrabold text-xl tracking-tight focus-visible:ring-2 focus-visible:ring-brand-500 rounded-lg p-1"
-        >
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-brand-700 to-brand-500 text-white shadow-sm">
-            <Compass className="h-5 w-5" />
-          </div>
-          <span>Encuéntralo</span>
-        </Link>
-
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-1.5" aria-label="Navegación principal">
-          <NavLink to="/objetos" className={navLinkClass}>
-            Catálogo
-          </NavLink>
-          <button
-            type="button"
-            onClick={() => abrirAyuda()}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-            title="Centro de ayuda y dudas frecuentes"
+    <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
+      <div className="container-app flex h-16 items-center justify-between gap-2 sm:gap-4">
+        {/* Identidad y Navegación izquierda */}
+        <div className="flex items-center gap-4 lg:gap-6 min-w-0">
+          <Link
+            to="/"
+            className="flex items-center gap-2.5 text-brand-700 font-extrabold text-xl tracking-tight focus-visible:ring-2 focus-visible:ring-brand-500 rounded-lg p-1 shrink-0"
           >
-            <HelpCircle className="w-4 h-4 text-brand-600" />
-            Ayuda
-          </button>
-          {usuario && (
-            <>
-              <NavLink to="/mis-publicaciones" className={navLinkClass}>
-                <FolderArchive className="w-4 h-4" />
-                Mis publicaciones
-              </NavLink>
-              <NavLink to="/mis-solicitudes" className={navLinkClass}>
-                <Inbox className="w-4 h-4" />
-                Mis solicitudes
-              </NavLink>
-              {usuario.rol === 'admin' && (
-                <NavLink to="/admin" className={navLinkClass}>
-                  <ShieldCheck className="w-4 h-4 text-brand-600" />
-                  Admin
-                </NavLink>
-              )}
-            </>
-          )}
-        </nav>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-brand-700 to-brand-500 text-white shadow-sm">
+              <Compass className="h-5 w-5" />
+            </div>
+            <span>Encuéntralo</span>
+          </Link>
 
-        {/* Acciones derecha */}
-        <div className="hidden md:flex items-center gap-3">
+          {/* Enlaces principales de exploración */}
+          <nav className="hidden md:flex items-center gap-1 min-w-0" aria-label="Navegación principal">
+            <NavLink to="/objetos" className={navLinkClass}>
+              Catálogo
+            </NavLink>
+            {usuario && (
+              <>
+                <NavLink to="/mis-publicaciones" className={navLinkClass}>
+                  <FolderArchive className="w-4 h-4 text-slate-500" />
+                  Mis publicaciones
+                </NavLink>
+                <NavLink to="/mis-solicitudes" className={navLinkClass}>
+                  <Inbox className="w-4 h-4 text-slate-500" />
+                  Mis solicitudes
+                </NavLink>
+                {usuario.rol === 'admin' && (
+                  <NavLink to="/admin" className={navLinkClass}>
+                    <ShieldCheck className="w-4 h-4 text-purple-600" />
+                    Admin
+                  </NavLink>
+                )}
+              </>
+            )}
+          </nav>
+        </div>
+
+        {/* Acciones y Utilidades derecha */}
+        <div className="hidden md:flex items-center gap-2 lg:gap-3 shrink-0">
           {usuario ? (
             <>
-              <Link to="/objetos/nuevo">
-                <Button variant="primary" size="sm" className="gap-1.5 shadow-sm">
+              {/* Botón CTA Destacado */}
+              <Link to="/objetos/nuevo" className="shrink-0">
+                <Button variant="primary" size="sm" className="gap-1.5 shadow-sm whitespace-nowrap px-3.5">
                   <PlusCircle className="w-4 h-4" />
                   Publicar objeto
                 </Button>
               </Link>
 
-              {/* Atajo Rápido: Chats de Entrega */}
-              <div className="relative">
+              {/* Separador vertical */}
+              <div className="h-5 w-px bg-slate-200 mx-0.5" aria-hidden="true" />
+
+              {/* Cluster de Herramientas y Notificaciones */}
+              <div className="flex items-center gap-0.5 text-slate-600">
+                {/* Botón de Ayuda */}
                 <button
                   type="button"
-                  onClick={togglePanelChat}
-                  aria-expanded={panelChatAbierto}
-                  aria-label={`Chats de entrega (${chatsActivos.length} activos)`}
-                  title="Chats de coordinación de entrega"
-                  className="relative p-2 text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  onClick={() => abrirAyuda()}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-brand-700 hover:bg-brand-50/80 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  title="Centro de Ayuda y dudas frecuentes"
+                  aria-label="Abrir centro de ayuda"
                 >
-                  <MessageCircle className="w-5 h-5" />
-                  {chatsActivos.length > 0 && (
-                    <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold text-white ring-2 ring-white">
-                      {chatsActivos.length}
-                    </span>
-                  )}
+                  <HelpCircle className="w-4 h-4 text-brand-600" />
+                  <span className="hidden xl:inline">Ayuda</span>
                 </button>
 
-                {panelChatAbierto && (
-                  <div className="absolute right-0 mt-2 w-80 rounded-2xl bg-white p-3 shadow-xl ring-1 ring-slate-200 border border-slate-100 animate-scale-in">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                      <span className="font-semibold text-sm text-slate-800 flex items-center gap-1.5">
-                        <MessageCircle className="w-4 h-4 text-emerald-600" />
-                        Chats de entrega
+                {/* Chats de Entrega */}
+                <div className="relative" ref={chatRef}>
+                  <button
+                    type="button"
+                    onClick={togglePanelChat}
+                    aria-expanded={panelChatAbierto}
+                    aria-label={`Chats de entrega (${chatsActivos.length} activos)`}
+                    title="Chats de coordinación de entrega"
+                    className="relative p-2 text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    {chatsActivos.length > 0 && (
+                      <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold text-white ring-2 ring-white">
+                        {chatsActivos.length}
                       </span>
-                      <span className="text-xs text-slate-500">{chatsActivos.length} activos</span>
+                    )}
+                  </button>
+
+                  {panelChatAbierto && (
+                    <div className="absolute right-0 mt-2 w-80 rounded-2xl bg-white p-3 shadow-xl ring-1 ring-slate-200 border border-slate-100 animate-scale-in z-50">
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                        <span className="font-semibold text-sm text-slate-800 flex items-center gap-1.5">
+                          <MessageCircle className="w-4 h-4 text-emerald-600" />
+                          Chats de entrega
+                        </span>
+                        <span className="text-xs text-slate-500">{chatsActivos.length} activos</span>
+                      </div>
+                      <div className="max-h-72 overflow-y-auto divide-y divide-slate-50 mt-1">
+                        {chatsActivos.length === 0 ? (
+                          <div className="p-4 text-center">
+                            <p className="text-xs text-slate-500 font-medium">No hay entregas activas.</p>
+                            <p className="text-[11px] text-slate-400 mt-1">
+                              El chat se activa automáticamente cuando se aprueba una solicitud de recuperación.
+                            </p>
+                          </div>
+                        ) : (
+                          chatsActivos.map((c) => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                abrirChat(c.id, c.titulo);
+                                setPanelChatAbierto(false);
+                              }}
+                              className="w-full text-left p-2.5 text-xs rounded-xl transition-colors hover:bg-emerald-50/70 flex items-center justify-between group"
+                            >
+                              <div className="min-w-0 pr-2">
+                                <p className="font-semibold text-slate-800 group-hover:text-emerald-700 truncate">
+                                  {c.titulo}
+                                </p>
+                                <p className="text-[11px] text-slate-500">Coordinar entrega segura</p>
+                              </div>
+                              <span className="text-emerald-600 font-bold text-xs group-hover:translate-x-0.5 transition-transform flex-shrink-0">
+                                Abrir &rarr;
+                              </span>
+                            </button>
+                          ))
+                        )}
+                      </div>
                     </div>
-                    <div className="max-h-72 overflow-y-auto divide-y divide-slate-50 mt-1">
-                      {chatsActivos.length === 0 ? (
-                        <div className="p-4 text-center">
-                          <p className="text-xs text-slate-500 font-medium">No hay entregas activas.</p>
-                          <p className="text-[11px] text-slate-400 mt-1">
-                            El chat se activa automáticamente cuando se aprueba una solicitud de recuperación.
-                          </p>
-                        </div>
-                      ) : (
-                        chatsActivos.map((c) => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => {
-                              abrirChat(c.id, c.titulo);
-                              setPanelChatAbierto(false);
-                            }}
-                            className="w-full text-left p-2.5 text-xs rounded-xl transition-colors hover:bg-emerald-50/70 flex items-center justify-between group"
-                          >
-                            <div className="min-w-0 pr-2">
-                              <p className="font-semibold text-slate-800 group-hover:text-emerald-700 truncate">
-                                {c.titulo}
-                              </p>
-                              <p className="text-[11px] text-slate-500">Coordinar entrega campus/hogar</p>
+                  )}
+                </div>
+
+                {/* Notificaciones */}
+                <div className="relative" ref={campanaRef}>
+                  <button
+                    type="button"
+                    onClick={toggleCampana}
+                    aria-expanded={campanaAbierta}
+                    aria-label={`Notificaciones (${noLeidas} no leídas)`}
+                    title="Notificaciones"
+                    className="relative p-2 text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
+                  >
+                    <Bell className="w-5 h-5" />
+                    {noLeidas > 0 && (
+                      <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white ring-2 ring-white">
+                        {noLeidas}
+                      </span>
+                    )}
+                  </button>
+
+                  {campanaAbierta && (
+                    <div className="absolute right-0 mt-2 w-80 rounded-2xl bg-white p-3 shadow-xl ring-1 ring-slate-200 border border-slate-100 animate-scale-in z-50">
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                        <span className="font-semibold text-sm text-slate-800">Notificaciones</span>
+                        <span className="text-xs text-slate-500">{notificaciones.length} total</span>
+                      </div>
+                      <div className="max-h-72 overflow-y-auto divide-y divide-slate-50 mt-1">
+                        {notificaciones.length === 0 ? (
+                          <p className="p-4 text-center text-xs text-slate-500">No tienes notificaciones.</p>
+                        ) : (
+                          notificaciones.map((n) => (
+                            <div
+                              key={n.id}
+                              className={`p-2.5 text-xs rounded-lg transition-colors ${
+                                n.leida ? 'text-slate-600 hover:bg-slate-50' : 'bg-brand-50/50 font-medium text-brand-900'
+                              }`}
+                            >
+                              <p>{n.mensaje}</p>
+                              {n.enlace && (
+                                <Link
+                                  to={n.enlace}
+                                  onClick={() => setCampanaAbierta(false)}
+                                  className="inline-block mt-1 text-brand-600 hover:underline font-semibold"
+                                >
+                                  Ver detalle &rarr;
+                                </Link>
+                              )}
                             </div>
-                            <span className="text-emerald-600 font-bold text-xs group-hover:translate-x-0.5 transition-transform flex-shrink-0">
-                              Abrir &rarr;
-                            </span>
-                          </button>
-                        ))
-                      )}
+                          ))
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
-              {/* Notificaciones */}
-              <div className="relative">
+              {/* Separador vertical */}
+              <div className="h-5 w-px bg-slate-200 mx-0.5" aria-hidden="true" />
+
+              {/* Menú de Usuario desplegable organizado */}
+              <div className="relative" ref={menuUsuarioRef}>
                 <button
                   type="button"
-                  onClick={toggleCampana}
-                  aria-expanded={campanaAbierta}
-                  aria-label={`Notificaciones (${noLeidas} no leídas)`}
-                  className="relative p-2 text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  onClick={() => {
+                    setMenuUsuarioAbierto(!menuUsuarioAbierto);
+                    setCampanaAbierta(false);
+                    setPanelChatAbierto(false);
+                  }}
+                  aria-expanded={menuUsuarioAbierto}
+                  aria-haspopup="menu"
+                  className="flex items-center gap-2 p-1.5 pr-2.5 rounded-full hover:bg-slate-100 border border-slate-200/80 transition-all focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-700 bg-white shadow-xs"
+                  title="Opciones de cuenta"
                 >
-                  <Bell className="w-5 h-5" />
-                  {noLeidas > 0 && (
-                    <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white ring-2 ring-white">
-                      {noLeidas}
-                    </span>
-                  )}
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-brand-700 to-brand-500 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                    {usuario.nombre.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-xs font-semibold text-slate-800 max-w-[85px] truncate">
+                    {usuario.nombre.split(' ')[0]}
+                  </span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                      menuUsuarioAbierto ? 'rotate-180' : ''
+                    }`}
+                  />
                 </button>
 
-                {campanaAbierta && (
-                  <div className="absolute right-0 mt-2 w-80 rounded-2xl bg-white p-3 shadow-xl ring-1 ring-slate-200 border border-slate-100 animate-scale-in">
-                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                      <span className="font-semibold text-sm text-slate-800">Notificaciones</span>
-                      <span className="text-xs text-slate-500">{notificaciones.length} total</span>
+                {menuUsuarioAbierto && (
+                  <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white p-2 shadow-xl ring-1 ring-slate-200 border border-slate-100 animate-scale-in z-50">
+                    <div className="px-3 py-2.5 border-b border-slate-100">
+                      <p className="text-xs font-bold text-slate-900 truncate">{usuario.nombre}</p>
+                      <p className="text-[11px] text-slate-500 truncate">{usuario.correo}</p>
+                      <div className="mt-1.5">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                            usuario.rol === 'admin'
+                              ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                              : 'bg-brand-50 text-brand-700 border border-brand-200'
+                          }`}
+                        >
+                          {usuario.rol === 'admin' ? 'Administrador' : 'Estudiante / Personal'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="max-h-72 overflow-y-auto divide-y divide-slate-50 mt-1">
-                      {notificaciones.length === 0 ? (
-                        <p className="p-4 text-center text-xs text-slate-500">No tienes notificaciones.</p>
-                      ) : (
-                        notificaciones.map((n) => (
-                          <div
-                            key={n.id}
-                            className={`p-2.5 text-xs rounded-lg transition-colors ${
-                              n.leida ? 'text-slate-600 hover:bg-slate-50' : 'bg-brand-50/50 font-medium text-brand-900'
-                            }`}
-                          >
-                            <p>{n.mensaje}</p>
-                            {n.enlace && (
-                              <Link
-                                to={n.enlace}
-                                onClick={() => setCampanaAbierta(false)}
-                                className="inline-block mt-1 text-brand-600 hover:underline font-semibold"
-                              >
-                                Ver detalle &rarr;
-                              </Link>
-                            )}
-                          </div>
-                        ))
+
+                    <div className="py-1">
+                      <Link
+                        to="/perfil"
+                        onClick={() => setMenuUsuarioAbierto(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 rounded-xl hover:bg-slate-50 transition-colors"
+                      >
+                        <User className="w-4 h-4 text-slate-400" />
+                        Mi Perfil
+                      </Link>
+                      <Link
+                        to="/mis-publicaciones"
+                        onClick={() => setMenuUsuarioAbierto(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 rounded-xl hover:bg-slate-50 transition-colors"
+                      >
+                        <FolderArchive className="w-4 h-4 text-slate-400" />
+                        Mis publicaciones
+                      </Link>
+                      <Link
+                        to="/mis-solicitudes"
+                        onClick={() => setMenuUsuarioAbierto(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 rounded-xl hover:bg-slate-50 transition-colors"
+                      >
+                        <Inbox className="w-4 h-4 text-slate-400" />
+                        Mis solicitudes
+                      </Link>
+                      {usuario.rol === 'admin' && (
+                        <Link
+                          to="/admin"
+                          onClick={() => setMenuUsuarioAbierto(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-purple-700 rounded-xl hover:bg-purple-50 transition-colors"
+                        >
+                          <ShieldCheck className="w-4 h-4 text-purple-600" />
+                          Panel de administración
+                        </Link>
                       )}
+                    </div>
+
+                    <div className="pt-1 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-rose-600 rounded-xl hover:bg-rose-50 transition-colors text-left"
+                      >
+                        <LogOut className="w-4 h-4 text-rose-500" />
+                        Cerrar sesión
+                      </button>
                     </div>
                   </div>
                 )}
-              </div>
-
-              {/* Usuario Dropdown / Salir */}
-              <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-                <Link
-                  to="/perfil"
-                  title="Mi Perfil"
-                  className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 transition-colors px-2.5 py-1.5 rounded-lg"
-                >
-                  <User className="w-3.5 h-3.5 text-slate-500" />
-                  {usuario.nombre.split(' ')[0]}
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  title="Cerrar sesión"
-                  aria-label="Cerrar sesión"
-                  className="p-2 text-slate-500 hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
               </div>
             </>
           ) : (
