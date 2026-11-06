@@ -178,7 +178,7 @@ export const Header: React.FC = () => {
     <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
       <div className="container-app flex h-16 items-center justify-between gap-2 sm:gap-4">
         {/* Identidad y Navegación izquierda */}
-        <div className="flex items-center gap-4 lg:gap-6 min-w-0">
+        <div className="flex items-center gap-3 lg:gap-5 shrink-0">
           <Link
             to="/"
             className="flex items-center gap-2.5 text-brand-700 font-extrabold text-xl tracking-tight focus-visible:ring-2 focus-visible:ring-brand-500 rounded-lg p-1 shrink-0"
@@ -190,24 +190,37 @@ export const Header: React.FC = () => {
           </Link>
 
           {/* Enlaces principales de exploración */}
-          <nav className="hidden md:flex items-center gap-1 min-w-0" aria-label="Navegación principal">
+          <nav className="hidden md:flex items-center gap-1" aria-label="Navegación principal">
             <NavLink to="/objetos" className={navLinkClass}>
               Catálogo
             </NavLink>
             {usuario && (
               <>
                 <NavLink to="/mis-publicaciones" className={navLinkClass}>
-                  <FolderArchive className="w-4 h-4 text-slate-500" />
-                  Mis publicaciones
+                  <FolderArchive className="w-4 h-4 text-slate-500 shrink-0" />
+                  <span>
+                    <span className="hidden xl:inline">Mis </span>publicaciones
+                  </span>
                 </NavLink>
                 <NavLink to="/mis-solicitudes" className={navLinkClass}>
-                  <Inbox className="w-4 h-4 text-slate-500" />
-                  Mis solicitudes
+                  <Inbox className="w-4 h-4 text-slate-500 shrink-0" />
+                  <span>
+                    <span className="hidden xl:inline">Mis </span>solicitudes
+                  </span>
                 </NavLink>
                 {usuario.rol === 'admin' && (
-                  <NavLink to="/admin" className={navLinkClass}>
-                    <ShieldCheck className="w-4 h-4 text-purple-600" />
-                    Admin
+                  <NavLink
+                    to="/admin"
+                    className={({ isActive }) =>
+                      `inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all whitespace-nowrap ml-1 ${
+                        isActive
+                          ? 'bg-purple-100 text-purple-800 ring-1 ring-purple-300'
+                          : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200/80 shadow-2xs'
+                      }`
+                    }
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                    <span>Admin</span>
                   </NavLink>
                 )}
               </>
