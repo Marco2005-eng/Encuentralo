@@ -48,14 +48,23 @@ export const RegistroPage: React.FC = () => {
     setErrorGlobal(null);
     setCargandoGoogle(true);
     try {
-      await iniciarSesionConGoogle();
-      mostrarToast('¡Registro con Google exitoso!', 'exito');
-      navigate('/objetos');
+      try {
+        sessionStorage.setItem('encuentralo:destino_oauth', '/objetos');
+      } catch {}
+      await iniciarSesionConGoogle('/objetos');
+
+      // Si estamos en entorno demo local (sin OAuth real):
+      if (import.meta.env.VITE_DATA_SOURCE === 'local') {
+        mostrarToast('¡Registro con Google exitoso!', 'exito');
+        navigate('/objetos', { replace: true });
+      }
     } catch (err: unknown) {
-      if (err instanceof Error) setErrorGlobal(err.message);
-      else setErrorGlobal('No fue posible registrarse con Google.');
-    } finally {
       setCargandoGoogle(false);
+      if (err instanceof Error) {
+        setErrorGlobal(err.message);
+      } else {
+        setErrorGlobal('No fue posible conectar con el servicio de Google. Inténtalo nuevamente.');
+      }
     }
   };
 
@@ -164,9 +173,11 @@ export const RegistroPage: React.FC = () => {
             variant="outline"
             onClick={handleGoogleSignup}
             cargando={cargandoGoogle}
+            cargandoTexto="Conectando con Google..."
+            disabled={cargandoGoogle || isSubmitting}
             className="w-full border-slate-200 hover:bg-slate-50 gap-2.5 text-slate-700 font-semibold"
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
               <path
                 fill="#4285F4"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"

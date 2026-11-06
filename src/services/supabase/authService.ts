@@ -117,11 +117,20 @@ export const supabaseAuthService: AuthService = {
     };
   },
 
-  async iniciarSesionConGoogle(): Promise<void> {
-    // Redirige directamente al endpoint REST oficial de Supabase Auth para Google OAuth
-    const redirectTo = encodeURIComponent(`${window.location.origin}/objetos`);
-    const googleAuthUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${redirectTo}`;
+  async iniciarSesionConGoogle(destino?: string): Promise<void> {
+    const rutaDestino = destino || '/objetos';
+    try {
+      sessionStorage.setItem('encuentralo:destino_oauth', rutaDestino);
+    } catch {}
+
+    // Redirige al callback dedicado de la aplicación para resolver la sesión sin parpadeos
+    // prompt=select_account asegura que Google abra directamente la selección de cuenta
+    const redirectTo = encodeURIComponent(`${window.location.origin}/auth/callback`);
+    const googleAuthUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${redirectTo}&prompt=select_account`;
     window.location.href = googleAuthUrl;
+
+    // Retorna una promesa pendiente para evitar que el llamador ejecute navegación interna antes de que el navegador descargue la página
+    return new Promise(() => {});
   },
 
   async cerrarSesion(): Promise<void> {

@@ -1,13 +1,38 @@
-import React from 'react';
-import { Outlet } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { Header } from './Header';
 import { Footer } from './Footer';
 import { useAuth } from '@/context/AuthContext';
 import { ShieldAlert, Info } from 'lucide-react';
 import { ModalSuspensionAviso } from '@/components/ui/ModalSuspensionAviso';
+import { AyudaProvider } from '@/context/AyudaContext';
+import { ModalCentroAyuda } from '@/components/ayuda/ModalCentroAyuda';
+import { BotonFlotanteAyuda } from '@/components/ayuda/BotonFlotanteAyuda';
+import { PantallaCarga } from '@/routes/guards';
 
-export const Layout: React.FC = () => {
-  const { estaSuspendido, motivoSuspension, fechaFinSuspension, abrirModalSuspension } = useAuth();
+const LayoutContenido: React.FC = () => {
+  const { cargando, usuario, estaSuspendido, motivoSuspension, fechaFinSuspension, abrirModalSuspension } = useAuth();
+  const navigate = useNavigate();
+
+  // Si tras resolver la sesión existe un destino guardado de OAuth, redirigir limpiamente sin pasar por el catálogo
+  useEffect(() => {
+    if (!cargando && usuario) {
+      try {
+        const destinoGuardado = sessionStorage.getItem('encuentralo:destino_oauth');
+        if (destinoGuardado) {
+          sessionStorage.removeItem('encuentralo:destino_oauth');
+          if (window.location.pathname !== destinoGuardado) {
+            navigate(destinoGuardado, { replace: true });
+          }
+        }
+      } catch {}
+    }
+  }, [cargando, usuario, navigate]);
+
+  // Mientras la sesión se inicializa, no renderizar catálogo ni páginas para evitar parpadeos
+  if (cargando) {
+    return <PantallaCarga mensaje="Cargando Encuéntralo..." />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans selection:bg-brand-500 selection:text-white">
@@ -27,9 +52,19 @@ export const Layout: React.FC = () => {
             <ShieldAlert className="w-5 h-5 shrink-0 text-rose-200" />
             <span>
               <strong>Cuenta suspendida temporalmente</strong> hasta el{' '}
-              {fechaFinSuspension ? new Date(fechaFinSuspension).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' }) : 'próximo aviso'}.
+              {fechaFinSuspension
+                ? new Date(fechaFinSuspension).toLocaleDateString('es-PE', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric',
+                  })
+                : 'próximo aviso'}
+              .
               {motivoSuspension && (
-                <span className="hidden md:inline"> Motivo: <em className="text-rose-100">{motivoSuspension}</em>.</span>
+                <span className="hidden md:inline">
+                  {' '}
+                  Motivo: <em className="text-rose-100">{motivoSuspension}</em>.
+                </span>
               )}
             </span>
           </div>
@@ -46,6 +81,8 @@ export const Layout: React.FC = () => {
       )}
 
       <ModalSuspensionAviso />
+      <ModalCentroAyuda />
+      <BotonFlotanteAyuda />
 
       <main id="contenido-principal" className="flex-1 flex flex-col focus:outline-none" tabIndex={-1}>
         <Outlet />
@@ -53,5 +90,13 @@ export const Layout: React.FC = () => {
 
       <Footer />
     </div>
+  );
+};
+
+export const Layout: React.FC = () => {
+  return (
+    <AyudaProvider>
+      <LayoutContenido />
+    </AyudaProvider>
   );
 };

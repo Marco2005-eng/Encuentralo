@@ -38,7 +38,7 @@ export const authService: AuthService = {
     return publico(u);
   },
 
-  async iniciarSesionConGoogle() {
+  async iniciarSesionConGoogle(_destino?: string) {
     await latencia();
     // En modo local demo: simula autenticación con una cuenta institucional de Google
     let usuarioGoogle = leer('usuarios').find((u) => u.correo === 'estudiante.google@encuentralo.test');

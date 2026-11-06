@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
+import { HelpTooltip } from '@/components/ui/HelpTooltip';
 import { Upload, X, ShieldAlert } from 'lucide-react';
 
 interface ObjetoFormProps {
@@ -203,7 +204,12 @@ export const ObjetoForm: React.FC<ObjetoFormProps> = ({
 
       {/* Descripción */}
       <Textarea
-        label="Descripción detallada"
+        label={
+          <span className="inline-flex items-center gap-1.5">
+            <span>Descripción detallada</span>
+            <HelpTooltip texto="Por tu seguridad, NO incluyas datos personales como DNI, teléfono o correo. La entrega se coordinará de forma privada." />
+          </span>
+        }
         rows={4}
         placeholder="Menciona color, detalles de diseño, estado general..."
         required

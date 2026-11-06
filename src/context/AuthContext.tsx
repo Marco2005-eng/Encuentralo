@@ -5,6 +5,7 @@ import { services } from '@/services';
 interface AuthContextType {
   usuario: Usuario | null;
   cargando: boolean;
+  loading: boolean;
   estaSuspendido: boolean;
   motivoSuspension: string | null;
   fechaFinSuspension: string | null;
@@ -12,7 +13,7 @@ interface AuthContextType {
   abrirModalSuspension: () => void;
   cerrarModalSuspension: () => void;
   iniciarSesion: (correo: string, contrasena: string) => Promise<Usuario>;
-  iniciarSesionConGoogle: () => Promise<void>;
+  iniciarSesionConGoogle: (destino?: string) => Promise<void>;
   registrar: (datos: { nombre: string; correo: string; contrasena: string }) => Promise<Usuario>;
   cerrarSesion: () => Promise<void>;
   refrescarSesion: () => Promise<void>;
@@ -72,10 +73,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return u;
   };
 
-  const iniciarSesionConGoogle = async () => {
+  const iniciarSesionConGoogle = async (destino?: string) => {
     if (services.auth.iniciarSesionConGoogle) {
-      await services.auth.iniciarSesionConGoogle();
-      await refrescarSesion();
+      await services.auth.iniciarSesionConGoogle(destino);
+      if (import.meta.env.VITE_DATA_SOURCE === 'local') {
+        await refrescarSesion();
+      }
     }
   };
 
@@ -128,6 +131,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         usuario,
         cargando,
+        loading: cargando,
         estaSuspendido,
         motivoSuspension,
         fechaFinSuspension,

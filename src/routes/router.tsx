@@ -12,7 +12,8 @@ import { MisSolicitudesPage } from '@/pages/MisSolicitudesPage';
 import { PerfilPage } from '@/pages/PerfilPage';
 import { AdminPage } from '@/pages/AdminPage';
 import { NoEncontradoPage } from '@/pages/NoEncontradoPage';
-import { RequireAuth, RequireAdmin } from './guards';
+import { AuthCallbackPage } from '@/pages/AuthCallbackPage';
+import { RequireAuth, RequireAdmin, PublicOnlyRoute } from './guards';
 
 export const router = createBrowserRouter([
   {
@@ -20,8 +21,23 @@ export const router = createBrowserRouter([
     element: <Layout />,
     children: [
       { index: true, element: <InicioPage /> },
-      { path: 'iniciar-sesion', element: <IniciarSesionPage /> },
-      { path: 'registro', element: <RegistroPage /> },
+      {
+        path: 'iniciar-sesion',
+        element: (
+          <PublicOnlyRoute>
+            <IniciarSesionPage />
+          </PublicOnlyRoute>
+        ),
+      },
+      {
+        path: 'registro',
+        element: (
+          <PublicOnlyRoute>
+            <RegistroPage />
+          </PublicOnlyRoute>
+        ),
+      },
+      { path: 'auth/callback', element: <AuthCallbackPage /> },
       { path: 'objetos', element: <CatalogoPage /> },
       {
         path: 'objetos/nuevo',

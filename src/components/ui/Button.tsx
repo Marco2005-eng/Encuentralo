@@ -5,6 +5,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
   size?: 'sm' | 'md' | 'lg';
   cargando?: boolean;
+  cargandoTexto?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -13,6 +14,7 @@ export const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   size = 'md',
   cargando = false,
+  cargandoTexto,
   disabled,
   type = 'button',
   ...props
@@ -47,7 +49,7 @@ export const Button: React.FC<ButtonProps> = ({
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
           </svg>
-          <span>Cargando...</span>
+          <span>{cargandoTexto || 'Cargando...'}</span>
         </span>
       ) : (
         children

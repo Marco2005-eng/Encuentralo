@@ -6,6 +6,7 @@ import { useToast } from '@/context/ToastContext';
 import type { ObjetoValues } from '@/lib/validaciones';
 import { ObjetoForm } from '@/components/objetos/ObjetoForm';
 import type { TipoReporte } from '@/types/models';
+import { Lock } from 'lucide-react';
 
 export const RegistrarObjetoPage: React.FC = () => {
   const navigate = useNavigate();
@@ -42,6 +43,19 @@ export const RegistrarObjetoPage: React.FC = () => {
         <p className="text-xs sm:text-sm text-slate-500 mt-1">
           Completa los datos del objeto para que la comunidad pueda encontrarlo o reconocerlo.
         </p>
+      </div>
+
+      {/* Banner Informativo de Privacidad y Buenas Prácticas */}
+      <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50/60 border border-blue-100 flex items-start gap-3 text-xs text-slate-700">
+        <Lock className="w-4 h-4 text-brand-600 shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <p className="font-bold text-slate-900">
+            Recomendación de seguridad institucional:
+          </p>
+          <p className="text-slate-600 leading-relaxed">
+            No incluyas números de celular, direcciones personales ni contraseñas en la descripción. Cuando se apruebe una solicitud, podrás coordinar la entrega en un punto seguro del campus mediante el <strong>Chat de Entrega</strong> privado.
+          </p>
+        </div>
       </div>
 
       <div className="card p-6 sm:p-8">

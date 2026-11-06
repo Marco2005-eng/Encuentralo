@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { CardSkeleton } from '@/components/ui/Skeleton';
 import { useChat } from '@/context/ChatContext';
-import { Inbox, ExternalLink, XCircle, Phone, MessageCircle } from 'lucide-react';
+import { Inbox, ExternalLink, XCircle, Phone, MessageCircle, Info } from 'lucide-react';
+import { HelpTooltip } from '@/components/ui/HelpTooltip';
 
 export const MisSolicitudesPage: React.FC = () => {
   const { usuario } = useAuth();
@@ -50,13 +51,42 @@ export const MisSolicitudesPage: React.FC = () => {
 
   return (
     <div className="container-app py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-          Mis solicitudes
-        </h1>
+      <div className="mb-6">
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Mis solicitudes
+          </h1>
+          <HelpTooltip texto="Aquí sigues el estado de tus reclamos. Una vez aprobada tu solicitud, podrás coordinar la entrega mediante el Chat privado." />
+        </div>
         <p className="text-xs sm:text-sm text-slate-500 mt-1">
           Estado y seguimiento de tus reclamos de pertenencia enviados a otros usuarios.
         </p>
+      </div>
+
+      {/* Leyenda contextual de estados con badges */}
+      <div className="mb-6 p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5">
+          <Info className="w-3.5 h-3.5 text-brand-600" />
+          <span>Guía de estados de una solicitud:</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs text-slate-600">
+          <div className="flex items-start gap-2 p-2 rounded-xl bg-slate-50 border border-slate-100">
+            <Badge estado="pendiente" className="shrink-0 text-[10px]" />
+            <span className="leading-tight">El publicador está revisando la prueba que enviaste.</span>
+          </div>
+          <div className="flex items-start gap-2 p-2 rounded-xl bg-slate-50 border border-slate-100">
+            <Badge estado="aprobada" className="shrink-0 text-[10px]" />
+            <span className="leading-tight">Se acreditó tu pertenencia. El chat de entrega ya está activo.</span>
+          </div>
+          <div className="flex items-start gap-2 p-2 rounded-xl bg-slate-50 border border-slate-100">
+            <Badge estado="rechazada" className="shrink-0 text-[10px]" />
+            <span className="leading-tight">Los datos no coincidieron. Revisa el motivo especificado.</span>
+          </div>
+          <div className="flex items-start gap-2 p-2 rounded-xl bg-slate-50 border border-slate-100">
+            <Badge estado="recuperado" className="shrink-0 text-[10px]" />
+            <span className="leading-tight">El objeto fue entregado y el caso se cerró con éxito.</span>
+          </div>
+        </div>
       </div>
 
       {cargando ? (

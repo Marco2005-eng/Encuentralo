@@ -1,7 +1,9 @@
 # Encuéntralo — Sistema web de objetos perdidos y encontrados
 
 > Proyecto académico de **Interacción Humano-Computador (IHC)**.
-> Este archivo es la fuente de verdad para el agente (opencode). Léelo completo antes de escribir código.
+> Este archivo es la fuente de verdad técnica y de arquitectura para el proyecto. Léelo completo antes de escribir código.
+>
+> **Regla de precedencia:** Ante cualquier conflicto, prevalecen el estado real del código y `.env`, y luego este archivo (`AGENTS.md`); `CONTEXTO_ENCUENTRALO.md` solo define el trabajo de UI/UX actual. No tocar lógica, base de datos ni autenticación.
 
 ---
 
@@ -11,47 +13,43 @@ Construir **Encuéntralo**, un sistema web para que estudiantes y personal de un
 
 El valor del proyecto está en **aplicar y demostrar principios de IHC** (sección 9), no solo en que funcione. Cada decisión de UI debe poder justificarse con un principio.
 
-## 2. Alcance actual: BETA LOCAL
+## 2. Estado actual del proyecto: Desplegado en Vercel con Supabase
 
-**Reglas estrictas de esta fase:**
+El sistema ha superado la etapa inicial de beta local y se encuentra **activo y desplegado**:
 
-- Todo funciona **100 % en local** (`npm run dev`), sin internet y sin backend.
-- **NO conectar Supabase todavía.** No instalar `@supabase/supabase-js` aún.
-- **NO usar GitHub todavía.** No crear workflows, no configurar remotos, no hacer push.
-- **NO configurar Vercel todavía.** No crear `vercel.json` ni scripts de deploy.
-- Los datos se guardan en el navegador (`localStorage`) y se precargan con datos de ejemplo (seed).
-- El código debe quedar **preparado para migrar a Supabase después sin reescribir la UI** (ver sección 5).
+- **Despliegue en producción:** Vercel ([encuentralo-eta.vercel.app](https://encuentralo-eta.vercel.app/)) con SPA estática de Vite y rewrites a `index.html`.
+- **Backend y persistencia:** Conectado a **Supabase** (`VITE_DATA_SOURCE=supabase` configurado en `.env`), gestionando PostgreSQL, Supabase Auth y Supabase Storage. La capa de servicios mantiene arquitectura desacoplada con soporte de `localStorage` (`services/local/`) como fallback.
+- **Estados de un objeto (4 estados conservados en la lógica y la UI):**
+  1. `perdido`: Objeto reportado como extraviado.
+  2. `encontrado`: Objeto hallado y reportado.
+  3. `en_proceso`: Objeto con solicitud de recuperación en curso o trámite de verificación (la UI muestra su propia etiqueta "En proceso").
+  4. `recuperado`: Objeto devuelto exitosamente a su dueño (caso cerrado).
+- **Módulos existentes y funcionales:**
+  - Gestión y autenticación de usuarios (roles `usuario` y `admin`, perfiles y avisos de suspensión).
+  - Publicación, edición, consulta y baja de objetos con filtros combinados y debounce.
+  - Fotografías de objetos y comprobantes/pruebas de pertenencia.
+  - Solicitudes de recuperación con acreditación de pertenencia.
+  - **Notificaciones internas:** Avisos ante cambios de estado de solicitudes y publicaciones.
+  - **Mensajes / Chat:** Módulo de chat de entrega (`ChatEntrega` y `MensajeEntrega`) para coordinar la devolución segura entre las partes tras aprobar una solicitud.
+  - Panel administrativo con métricas y estadísticas visuales.
 
-Fuera de alcance en la beta: correo electrónico real, recuperación de contraseña, subida de imágenes a servidor, notificaciones push, chat entre usuarios, multi-institución.
+El alcance del trabajo actual se enfoca en **mejoras de Interacción Humano-Computador (IHC), accesibilidad y experiencia de usuario (UI/UX)** descritas en `CONTEXTO_ENCUENTRALO.md`.
 
 ## 3. Stack tecnológico
 
-### Beta local (usar ahora)
-
-| Capa | Tecnología |
-| --- | --- |
-| Framework | React 18 + TypeScript + **Vite** |
-| Rutas | React Router v6 |
-| Estilos | Tailwind CSS |
-| Formularios y validación | React Hook Form + Zod |
-| Estado global | Context API (sesión) + hooks propios; sin Redux |
-| Persistencia | `localStorage` detrás de una capa de servicios |
-| Iconos | lucide-react |
-| Gráficos (estadísticas) | Recharts (o barras simples en CSS si se quiere cero dependencias) |
-| Pruebas (opcional) | Vitest + Testing Library |
-
-### Producción futura (NO implementar ahora, solo tenerlo en cuenta)
-
-| Capa | Tecnología |
-| --- | --- |
-| Base de datos | Supabase (PostgreSQL) |
-| Autenticación | Supabase Auth (email + contraseña) |
-| Imágenes | Supabase Storage (bucket `objetos`) |
-| Seguridad de datos | Row Level Security (RLS) |
-| Despliegue | Vercel (SPA estática de Vite, con rewrite a `index.html`) |
-| Control de versiones | GitHub (integración con Vercel) |
-
-**Por qué Vite y no Next.js:** la beta es local y sin servidor; una SPA evita problemas de SSR con `localStorage`, y Supabase se consume directo desde el navegador. Vercel sirve una SPA de Vite sin problema.
+| Capa | Tecnología | Estado |
+| --- | --- | --- |
+| Framework | React 18 + TypeScript + **Vite** | En producción |
+| Rutas | React Router v6 | En producción |
+| Estilos | Tailwind CSS | En producción |
+| Formularios y validación | React Hook Form + Zod | En producción |
+| Estado global | Context API (AuthContext, ChatContext, ToastContext) + hooks propios | En producción |
+| Persistencia activa | Supabase (`VITE_DATA_SOURCE=supabase`) detrás de capa de servicios | En producción |
+| Persistencia alternativa | `localStorage` (`services/local/`) con seed inicial | Fallback / Demo |
+| Base de datos & Auth | Supabase (PostgreSQL + Supabase Auth + RLS + Storage) | En producción |
+| Despliegue | Vercel (SPA estática con rewrites a `index.html`) | En producción |
+| Iconos | lucide-react | En producción |
+| Gráficos (estadísticas) | Recharts | En producción |
 
 ## 4. Roles
 
@@ -167,23 +165,31 @@ interface Notificacion {
   enlace?: string;            // ruta interna relacionada
   creadoEn: string;
 }
+
+interface MensajeEntrega {
+  id: string;
+  solicitudId: string;
+  emisorId: string;
+  mensaje: string;
+  creadoEn: string;
+}
 ```
 
 ### Reglas de negocio
 
 1. Un objeto se crea en estado `perdido` o `encontrado` según el `tipo`.
-2. Al existir una solicitud `pendiente`, el objeto puede pasar a `en_proceso`.
+2. Al existir una solicitud `pendiente`, el objeto pasa a `en_proceso` y la UI muestra su etiqueta correspondiente ("En proceso").
 3. Al **aprobar** una solicitud el objeto pasa a `recuperado` y las demás solicitudes pendientes del mismo objeto se marcan `rechazada` automáticamente (con notificación).
 4. Al **rechazar**, se pide un motivo breve y el objeto vuelve a su estado anterior si no quedan solicitudes pendientes.
 5. Un usuario **no puede solicitar** un objeto que él mismo publicó, ni enviar dos solicitudes pendientes sobre el mismo objeto.
 6. Solo el autor (o un admin) puede editar o eliminar una publicación. Eliminar exige confirmación.
 7. Cada cambio de estado de una solicitud genera una **notificación interna** al solicitante.
-8. **Privacidad:** el catálogo y el detalle nunca muestran correo, teléfono ni nombre completo del propietario/publicador. Se muestra, como máximo, "Publicado por un usuario de la institución". La entrega se coordina solo tras aprobar la solicitud, verificando la prueba de pertenencia.
+8. **Privacidad:** el catálogo y el detalle nunca muestran correo, teléfono ni nombre completo del propietario/publicador. Se muestra, como máximo, "Publicado por un usuario de la institución". La entrega se coordina solo tras aprobar la solicitud mediante el chat interno (`ChatEntrega`), verificando la prueba de pertenencia.
 9. Un objeto `recuperado` sigue visible (con insignia clara) pero ya no permite nuevas solicitudes.
 
 ### Datos de ejemplo (seed)
 
-Precargar al primer arranque, si `localStorage` está vacío: las 3 cuentas de la sección 4, entre **12 y 15 objetos** variados (mezcla de perdidos, encontrados y recuperados, todas las categorías), **4–6 solicitudes** en distintos estados y algunas notificaciones. Para las imágenes del seed usar SVG/placeholder local generado (no depender de internet). Añadir un botón discreto en el panel admin: **"Restablecer datos de demostración"** (con confirmación).
+El sistema incluye seed para demostración tanto en local (`services/local/seed.ts`) como scripts de seed en Supabase (`supabase/supabase_seed.sql`). En el panel admin se dispone de opciones para supervisar datos.
 
 ## 7. Pantallas y rutas
 
@@ -199,6 +205,7 @@ Precargar al primer arranque, si `localStorage` está vacío: las 3 cuentas de l
 | 6 | Editar publicación | `/mis-publicaciones/:id/editar` | Autor o admin |
 | 7 | Mis solicitudes | `/mis-solicitudes` | Usuario autenticado |
 | 8 | Panel de administración | `/admin` | Solo admin |
+| 9 | Perfil de usuario | `/perfil` | Usuario autenticado |
 | — | No encontrado | `*` | Público |
 
 Si un usuario no autenticado intenta entrar a una ruta protegida, redirigir a `/iniciar-sesion` y **volver a la ruta original** tras iniciar sesión.
@@ -257,18 +264,19 @@ Si un usuario no autenticado intenta entrar a una ruta protegida, redirigir a `/
 - Tabla de **solicitudes** con acciones aprobar/rechazar.
 - Botón "Restablecer datos de demostración".
 
-## 8. Funcionalidades por módulo (checklist de la propuesta)
+## 8. Funcionalidades por módulo
 
-| Módulo | Funcionalidades |
-| --- | --- |
-| Gestión de usuarios | Registro, inicio y cierre de sesión |
-| Gestión de objetos | Registrar, editar, eliminar y consultar publicaciones |
-| Búsqueda | Por nombre, categoría, ubicación y estado |
-| Fotografías | Adjuntar una imagen del objeto |
-| Solicitudes | Solicitar recuperación y consultar su estado |
-| Administración | Revisar publicaciones y gestionar solicitudes |
-| Notificaciones | Avisos internos al cambiar el estado de una solicitud |
-| Estadísticas | Cantidades de objetos perdidos, encontrados y recuperados |
+| Módulo | Funcionalidades | Estado |
+| --- | --- | --- |
+| Gestión de usuarios | Registro, inicio y cierre de sesión, perfil, control de baneo/suspensión | Implementado |
+| Gestión de objetos | Registrar, editar, eliminar y consultar publicaciones | Implementado |
+| Búsqueda | Por nombre, categoría, ubicación y estado con debounce | Implementado |
+| Fotografías | Adjuntar imagen del objeto y pruebas de pertenencia | Implementado |
+| Solicitudes | Solicitar recuperación y consultar su estado | Implementado |
+| Notificaciones | Avisos internos al cambiar el estado de una solicitud | Implementado |
+| Mensajería / Chat de entrega | Canal privado para coordinar la devolución segura del objeto (`ChatEntrega`) | Implementado |
+| Administración | Revisar publicaciones, gestionar solicitudes y supervisar estadísticas | Implementado |
+| Estadísticas | Cantidades de objetos perdidos, encontrados y recuperados | Implementado |
 
 ## 9. Principios de IHC: requisitos concretos de implementación
 
@@ -308,67 +316,52 @@ Definir los colores como **variables de Tailwind/CSS** en un solo lugar; verific
 - No dejar `console.log` en el código final.
 - Commits: no aplica aún (sin Git en esta fase).
 
-## 11. Plan de trabajo por fases
+## 11. Plan de trabajo de construcción inicial (COMPLETADO)
 
-Trabaja **fase por fase**. Al terminar cada una, verifica que `npm run dev` y `npm run build` funcionan y resume qué se hizo antes de continuar.
+La construcción inicial del sistema (Fases 0 a 8) fue completada exitosamente:
 
-**Fase 0 — Preparación**
-- Crear proyecto Vite + React + TS, instalar dependencias de la sección 3 (solo las de beta local).
-- Configurar Tailwind, tokens de color/tipografía, `.env.example`, estructura de carpetas.
+- [x] **Fase 0 — Preparación:** Proyecto Vite + React + TS, dependencias, Tailwind y configuración base.
+- [x] **Fase 1 — Base y componentes UI:** Componentes `ui/` accesibles (Button, Input, Select, Textarea, Modal, Badge, Toast, Skeleton, EmptyState) y layout responsive.
+- [x] **Fase 2 — Capa de servicios:** Arquitectura desacoplada en `services/types.ts` con implementaciones `local/` y `supabase/`.
+- [x] **Fase 3 — Autenticación:** Pantallas de registro e inicio de sesión con validación Zod, cierre de sesión y redirección.
+- [x] **Fase 4 — Objetos:** Catálogo con búsqueda y filtros sincronizados en URL, formulario con fotos comprimidas, detalle, edición y eliminación.
+- [x] **Fase 5 — Solicitudes, notificaciones y chat:** Acreditación de pertenencia, aprobación/rechazo, avisos internos y canal de chat de entrega (`ChatEntrega`).
+- [x] **Fase 6 — Administración y estadísticas:** Panel admin con métricas, gráficos Recharts y gestión integral.
+- [x] **Fase 7 — Pulido IHC:** Accesibilidad inicial, responsive mobile-first y navegación con teclado.
+- [x] **Fase 8 — Despliegue en producción:** Conexión a Supabase y despliegue en Vercel (`https://encuentralo-eta.vercel.app/`).
 
-**Fase 1 — Base y componentes UI**
-- Componentes `ui/` accesibles (Button, Input, Select, Textarea, Modal, Badge, Toast, Skeleton, EmptyState).
-- Layout con header, nav responsive, footer, enlace "Saltar al contenido".
+> **Nota:** El trabajo en curso corresponde a las fases de refinamiento y mejora de UI/UX documentadas en `CONTEXTO_ENCUENTRALO.md`.
 
-**Fase 2 — Capa de servicios local**
-- Interfaces en `services/types.ts`, implementación `local/`, seed, `AuthContext`, guards de ruta.
+## 12. Despliegue en producción y seguridad (IMPLEMENTADO)
 
-**Fase 3 — Autenticación**
-- Pantallas de registro e inicio de sesión con validación; cierre de sesión; redirección a ruta original.
+La integración con Supabase y Vercel se encuentra activa y operando en producción:
 
-**Fase 4 — Objetos**
-- Catálogo con búsqueda y filtros (URL sincronizada), formulario de registro con imagen comprimida, detalle, editar y eliminar.
+- **Despliegue frontend:** Vercel ([encuentralo-eta.vercel.app](https://encuentralo-eta.vercel.app/)) con SPA estática de Vite y rewrites configurados en `vercel.json` hacia `index.html`.
+- **Base de datos y Storage:** Tablas `perfiles` (ligada a `auth.users`), `objetos`, `solicitudes`, `notificaciones`, `mensajes_entrega` y bucket `objetos` en Supabase Storage.
+- **Configuración activa:** `VITE_DATA_SOURCE=supabase` configurado en `.env` (con implementación de fallback en `services/local/` si se alterna la fuente de datos).
+- **Seguridad (RLS) — Requisitos obligatorios:**
+  - **RLS activo en todas las tablas:** Políticas de seguridad aplicadas a nivel de fila sin excepción.
+  - **Protección de roles:** Los usuarios no pueden modificar su propio rol (`rol` en tabla `perfiles`).
+  - **Control de visibilidad:** Lectura pública solo para publicaciones de `objetos`; las solicitudes y el chat de entrega (`mensajes_entrega`) son estrictamente visibles solo para el solicitante, el autor del objeto y el administrador.
+  - **Notificaciones:** Lectura y marcado permitido únicamente al usuario dueño de la notificación; creación controlada.
+  - **Operaciones transaccionales:** Aprobar y rechazar solicitudes se realiza mediante funciones transaccionales de PostgreSQL para asegurar consistencia en los cambios de estado.
+  - **Credenciales en el cliente:** Estrictamente prohibido usar la clave `service_role` en el cliente frontend (usar exclusivamente `anon key`).
+  - **Integridad:** Prohibido modificar políticas RLS o esquemas de base de datos sin previo aviso y explicación detallada del cambio.
 
-**Fase 5 — Solicitudes y notificaciones**
-- Solicitar recuperación, Mis solicitudes, aprobar/rechazar desde Mis publicaciones, notificaciones internas con campana.
+## 13. Qué NO hacer en la etapa actual
 
-**Fase 6 — Administración y estadísticas**
-- Panel admin con métricas, gráficos, gestión de publicaciones y solicitudes, restablecer demo.
-
-**Fase 7 — Pulido IHC**
-- Revisión del checklist de la sección 9, pruebas de teclado, contraste, responsive (360/768/1280), estados vacíos y de error, textos.
-
-**Fase 8 — Entrega de la beta**
-- `README.md` con instrucciones de ejecución local, cuentas demo y capturas; revisar que `npm run build` pasa sin errores.
-
-## 12. Preparación futura (referencia, NO implementar ahora)
-
-Cuando el equipo decida pasar a producción, el plan será:
-
-1. Crear proyecto en Supabase; tablas `usuarios` (perfil ligado a `auth.users`), `objetos`, `solicitudes`, `notificaciones`; bucket `objetos` en Storage.
-2. Activar **RLS**: lectura pública de `objetos`; escritura solo del autor; solicitudes visibles solo para solicitante, autor del objeto y admin; rol admin mediante columna `rol` en el perfil.
-3. Implementar `services/supabase/*` con las mismas interfaces de `services/types.ts` y cambiar `VITE_DATA_SOURCE=supabase`.
-4. Subir el código a GitHub y conectar el repositorio a **Vercel** (framework Vite, variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`, rewrite de todas las rutas a `index.html`).
-
-Para dejar esto listo **sin hacerlo todavía**: mantener la UI desacoplada de `localStorage`, usar `string` para IDs y fechas ISO (compatible con `uuid` y `timestamptz`), y no depender de comportamientos exclusivos del almacenamiento local.
-
-## 13. Qué NO hacer
-
-- No conectar Supabase, GitHub ni Vercel en esta fase.
-- No acceder a `localStorage` desde componentes o páginas.
+- **NO tocar la lógica de negocio, el esquema de base de datos ni la autenticación** (las tareas actuales son estrictamente de UI/UX e IHC).
+- No acceder a `localStorage` directamente desde componentes o páginas.
 - No mostrar datos personales de propietarios/publicadores en vistas públicas.
-- No usar imágenes remotas ni CDNs para recursos críticos (debe funcionar sin internet).
-- No añadir funcionalidades fuera del alcance sin preguntar.
-- No dejar acciones destructivas sin confirmación.
-- No usar el color como único medio para comunicar información.
+- No dejar acciones destructivas sin confirmación modal.
+- No usar el color como único medio para comunicar información (las etiquetas de estado deben incluir icono y texto descriptivo).
 
-## 14. Definición de "terminado" para la beta
+## 14. Definición de "terminado" del sistema base
 
-- [ ] Las 8 pantallas existen y son navegables con las rutas de la sección 7.
-- [ ] Flujo completo funcional: registrarse → publicar objeto → buscar → solicitar → aprobar → objeto recuperado → notificación visible.
-- [ ] Roles respetados (usuario vs. admin) con rutas protegidas.
-- [ ] Datos persisten al recargar la página.
-- [ ] Checklist de IHC (sección 9) cumplido y verificable.
-- [ ] Funciona sin conexión a internet.
-- [ ] `npm run build` sin errores ni advertencias de TypeScript.
-- [ ] `README.md` con pasos para correr el proyecto y cuentas de demostración.
+- [x] Las 8+ pantallas existen y son navegables con las rutas de la sección 7.
+- [x] Flujo completo funcional: registrarse → publicar objeto → buscar → solicitar → aprobar → objeto recuperado → notificación y chat.
+- [x] Roles respetados (usuario vs. admin) con rutas protegidas.
+- [x] Datos persisten en Supabase (y en `localStorage` si se alterna la fuente).
+- [x] Checklist de IHC (sección 9) cumplido y verificable.
+- [x] `npm run build` sin errores ni advertencias de TypeScript.
+- [x] Despliegue activo en Vercel.

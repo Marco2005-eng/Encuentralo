@@ -15,13 +15,16 @@ import {
   LogOut,
   User,
   MessageCircle,
+  HelpCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useChat } from '@/context/ChatContext';
+import { useAyuda } from '@/context/AyudaContext';
 
 export const Header: React.FC = () => {
   const { usuario, cerrarSesion } = useAuth();
   const { abrirChat } = useChat();
+  const { abrirAyuda } = useAyuda();
   const navigate = useNavigate();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [campanaAbierta, setCampanaAbierta] = useState(false);
@@ -150,6 +153,15 @@ export const Header: React.FC = () => {
           <NavLink to="/objetos" className={navLinkClass}>
             Catálogo
           </NavLink>
+          <button
+            type="button"
+            onClick={() => abrirAyuda()}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            title="Centro de ayuda y dudas frecuentes"
+          >
+            <HelpCircle className="w-4 h-4 text-brand-600" />
+            Ayuda
+          </button>
           {usuario && (
             <>
               <NavLink to="/mis-publicaciones" className={navLinkClass}>
@@ -474,6 +486,17 @@ export const Header: React.FC = () => {
             >
               Catálogo de objetos
             </Link>
+            <button
+              type="button"
+              onClick={() => {
+                setMenuAbierto(false);
+                abrirAyuda();
+              }}
+              className="w-full text-left p-2.5 rounded-xl font-medium text-slate-800 hover:bg-slate-50 flex items-center gap-2"
+            >
+              <HelpCircle className="w-4 h-4 text-brand-600" />
+              Centro de Ayuda / ¿Cómo funciona?
+            </button>
             {usuario ? (
               <>
                 <Link

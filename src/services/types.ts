@@ -50,7 +50,7 @@ export interface Estadisticas {
 export interface AuthService {
   registrar(datos: { nombre: string; correo: string; contrasena: string }): Promise<Usuario>;
   iniciarSesion(correo: string, contrasena: string): Promise<Usuario>;
-  iniciarSesionConGoogle?(): Promise<void>;
+  iniciarSesionConGoogle?(destino?: string): Promise<void>;
   cerrarSesion(): Promise<void>;
   usuarioActual(): Promise<Usuario | null>;
   actualizarPerfil(datos: { nombre: string; telefono?: string }): Promise<Usuario>;

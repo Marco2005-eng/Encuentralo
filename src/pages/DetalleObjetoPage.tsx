@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Textarea } from '@/components/ui/Textarea';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { HelpTooltip } from '@/components/ui/HelpTooltip';
 import { comprimirImagen } from '@/lib/imagenes';
 import {
   MapPin,
@@ -377,9 +378,14 @@ export const DetalleObjetoPage: React.FC = () => {
 
           <Textarea
             label={
-              objeto.tipo === 'perdido'
-                ? 'Detalles del hallazgo y ubicación actual'
-                : 'Detalles de pertenencia'
+              <span className="inline-flex items-center gap-1.5">
+                <span>
+                  {objeto.tipo === 'perdido'
+                    ? 'Detalles del hallazgo y ubicación actual'
+                    : 'Detalles de pertenencia'}
+                </span>
+                <HelpTooltip texto="Ej: rasguños, stickers, contenido de la mochila. Esto NO se muestra al público." />
+              </span>
             }
             rows={4}
             placeholder={

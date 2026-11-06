@@ -2,7 +2,7 @@ import React, { useId } from 'react';
 import { cn } from '@/lib/fechas';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
+  label?: React.ReactNode;
   error?: string;
   ayuda?: string;
 }

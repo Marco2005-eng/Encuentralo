@@ -2,7 +2,7 @@ import React, { useId } from 'react';
 import { cn } from '@/lib/fechas';
 
 export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
-  label?: string;
+  label?: React.ReactNode;
   error?: string;
   ayuda?: string;
 }
