@@ -1,6 +1,6 @@
 import type { SolicitudConObjeto, SolicitudesService } from '@/services/types';
 import type { Solicitud, Usuario } from '@/types/models';
-import { SUPABASE_URL, SUPABASE_ANON_KEY, obtenerSesionLocal } from './client';
+import { SUPABASE_URL, SUPABASE_ANON_KEY, obtenerSesionLocal, obtenerSuspensionUsuario } from './client';
 import { subirImagenASupabaseStorage } from './storageService';
 import { supabaseNotificacionesService } from './notificacionesService';
 
@@ -16,6 +16,11 @@ function getHeaders(token?: string) {
 
 export const supabaseSolicitudesService: SolicitudesService = {
   async crear(objetoId, pruebaPertenencia, usuario, pruebaImagen): Promise<Solicitud> {
+    const localSusp = obtenerSuspensionUsuario(usuario.id);
+    if (localSusp && new Date(localSusp.baneadoHasta) > new Date()) {
+      throw new Error('Acceso denegado: Tu cuenta está suspendida temporalmente y no puede enviar solicitudes.');
+    }
+
     const sesion = obtenerSesionLocal();
     const token = sesion?.access_token;
 

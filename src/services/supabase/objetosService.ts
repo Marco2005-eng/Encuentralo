@@ -1,6 +1,6 @@
 import type { Objeto, Usuario } from '@/types/models';
 import type { ObjetosService, ObjetoFiltros, NuevoObjeto } from '@/services/types';
-import { SUPABASE_URL, SUPABASE_ANON_KEY, obtenerSesionLocal } from './client';
+import { SUPABASE_URL, SUPABASE_ANON_KEY, obtenerSesionLocal, obtenerSuspensionUsuario } from './client';
 import { subirImagenASupabaseStorage } from './storageService';
 import { supabaseNotificacionesService } from './notificacionesService';
 
@@ -98,6 +98,13 @@ export const supabaseObjetosService: ObjetosService = {
 
   async crear(datos: NuevoObjeto, usuarioId: string): Promise<Objeto> {
     // Verificación estricta de baneo/suspensión antes de publicar
+    const localSusp = obtenerSuspensionUsuario(usuarioId);
+    if (localSusp && new Date(localSusp.baneadoHasta) > new Date()) {
+      throw new Error(
+        'Acceso denegado: Tu cuenta se encuentra suspendida temporalmente y no tiene permisos para publicar objetos.'
+      );
+    }
+
     const sesion = obtenerSesionLocal();
     if (sesion?.access_token) {
       try {

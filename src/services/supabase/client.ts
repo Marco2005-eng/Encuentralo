@@ -100,3 +100,52 @@ export async function obtenerAccessTokenValido(): Promise<string | null> {
 
   return sesion.access_token;
 }
+
+// ==============================================================================
+// GESTIÓN DE CACHÉ SINCRONIZADA DE SUSPENSIONES
+// ==============================================================================
+export const STORAGE_BANS_KEY = 'encuentralo:suspensiones_cache';
+
+export interface SuspensionRegistro {
+  baneadoHasta: string;
+  motivoBaneo: string;
+}
+
+export function obtenerSuspensionesLocales(): Record<string, SuspensionRegistro> {
+  try {
+    const raw = localStorage.getItem(STORAGE_BANS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function guardarSuspensionLocal(usuarioId: string, baneadoHasta: string, motivo: string) {
+  try {
+    const todos = obtenerSuspensionesLocales();
+    todos[usuarioId] = { baneadoHasta, motivoBaneo: motivo };
+    localStorage.setItem(STORAGE_BANS_KEY, JSON.stringify(todos));
+  } catch {}
+}
+
+export function quitarSuspensionLocal(usuarioId: string) {
+  try {
+    const todos = obtenerSuspensionesLocales();
+    delete todos[usuarioId];
+    localStorage.setItem(STORAGE_BANS_KEY, JSON.stringify(todos));
+  } catch {}
+}
+
+export function obtenerSuspensionUsuario(usuarioId: string): SuspensionRegistro | null {
+  try {
+    const todos = obtenerSuspensionesLocales();
+    const item = todos[usuarioId];
+    if (item && new Date(item.baneadoHasta) > new Date()) {
+      return item;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+

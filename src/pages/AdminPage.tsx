@@ -197,7 +197,7 @@ export const AdminPage: React.FC = () => {
       );
       setUsuarioParaSuspender(null);
       setMotivoSuspension('');
-      cargarAdminData();
+      await cargarAdminData();
     } catch (err: unknown) {
       if (err instanceof Error) mostrarToast(err.message, 'error');
     } finally {
@@ -211,7 +211,7 @@ export const AdminPage: React.FC = () => {
       try {
         await services.auth.quitarSuspension(u.id, usuario);
         mostrarToast(`Suspensión levantada para ${u.nombre}.`, 'exito');
-        cargarAdminData();
+        await cargarAdminData();
       } catch (err: unknown) {
         if (err instanceof Error) mostrarToast(err.message, 'error');
       }

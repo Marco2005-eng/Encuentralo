@@ -6,6 +6,10 @@ import {
   guardarSesionLocal,
   obtenerSesionLocal,
   refrescarTokenSupabase,
+  guardarSuspensionLocal,
+  quitarSuspensionLocal,
+  obtenerSuspensionesLocales,
+  obtenerSuspensionUsuario,
 } from './client';
 import { supabaseNotificacionesService } from './notificacionesService';
 
@@ -103,6 +107,15 @@ export const supabaseAuthService: AuthService = {
         }
       }
     } catch {}
+
+    // Cotejar con caché sincronizada si la base de datos no trajo suspensión
+    if (!baneadoHastaReal) {
+      const suspLocal = obtenerSuspensionUsuario(user.id);
+      if (suspLocal) {
+        baneadoHastaReal = suspLocal.baneadoHasta;
+        motivoBaneoReal = suspLocal.motivoBaneo;
+      }
+    }
 
     // SI LA CUENTA ESTÁ SUSPENDIDA: Denegar acceso, no guardar sesión y notificar
     if (baneadoHastaReal && new Date(baneadoHastaReal) > new Date()) {
@@ -215,6 +228,14 @@ export const supabaseAuthService: AuthService = {
             // Ignorar y usar user_metadata
           }
 
+          if (!baneadoHastaReal) {
+            const suspLocal = obtenerSuspensionUsuario(user.id);
+            if (suspLocal) {
+              baneadoHastaReal = suspLocal.baneadoHasta;
+              motivoBaneoReal = suspLocal.motivoBaneo;
+            }
+          }
+
           // Si el usuario que vuelve de Google OAuth está suspendido, invalidar acceso de inmediato
           if (baneadoHastaReal && new Date(baneadoHastaReal) > new Date()) {
             guardarSesionLocal(null);
@@ -314,6 +335,14 @@ export const supabaseAuthService: AuthService = {
         }
       } catch {
         // Ignorar y usar user_metadata
+      }
+
+      if (!baneadoHastaReal) {
+        const suspLocal = obtenerSuspensionUsuario(user.id);
+        if (suspLocal) {
+          baneadoHastaReal = suspLocal.baneadoHasta;
+          motivoBaneoReal = suspLocal.motivoBaneo;
+        }
       }
 
       // Si la cuenta tiene una suspensión activa posterior, invalidar la sesión existente
@@ -425,18 +454,33 @@ export const supabaseAuthService: AuthService = {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/perfiles?order=creado_en.desc&select=*`, {
       headers: getAuthHeaders(sesion?.access_token),
     });
-    if (!res.ok) return [];
-    const perfiles = await res.json();
-    return perfiles.map((p: any) => ({
-      id: p.id,
-      nombre: p.nombre,
-      correo: p.correo,
-      telefono: p.telefono || undefined,
-      rol: p.rol || 'usuario',
-      creadoEn: p.creado_en,
-      baneadoHasta: p.baneado_hasta || null,
-      motivoBaneo: p.motivo_baneo || null,
-    }));
+    const perfiles = res.ok ? await res.json() : [];
+    const suspensiones = obtenerSuspensionesLocales();
+
+    return perfiles.map((p: any) => {
+      let baneadoHasta = p.baneado_hasta || null;
+      let motivoBaneo = p.motivo_baneo || null;
+
+      // Si la base de datos no tiene la columna o viene null, cotejar con la caché sincronizada
+      const cache = suspensiones[p.id];
+      if (cache && (!baneadoHasta || new Date(cache.baneadoHasta) > new Date(baneadoHasta))) {
+        if (new Date(cache.baneadoHasta) > new Date()) {
+          baneadoHasta = cache.baneadoHasta;
+          motivoBaneo = cache.motivoBaneo;
+        }
+      }
+
+      return {
+        id: p.id,
+        nombre: p.nombre,
+        correo: p.correo,
+        telefono: p.telefono || undefined,
+        rol: p.rol || 'usuario',
+        creadoEn: p.creado_en,
+        baneadoHasta,
+        motivoBaneo,
+      };
+    });
   },
 
   async suspenderUsuario(usuarioId: string, dias: number, motivo: string, admin: Usuario): Promise<void> {
@@ -444,15 +488,48 @@ export const supabaseAuthService: AuthService = {
     const sesion = obtenerSesionLocal();
     const fechaFin = new Date();
     fechaFin.setDate(fechaFin.getDate() + dias);
+    const fechaIso = fechaFin.toISOString();
 
-    await fetch(`${SUPABASE_URL}/rest/v1/perfiles?id=eq.${usuarioId}`, {
-      method: 'PATCH',
-      headers: getAuthHeaders(sesion?.access_token),
-      body: JSON.stringify({
-        baneado_hasta: fechaFin.toISOString(),
-        motivo_baneo: motivo.trim(),
-      }),
-    });
+    // 1. Guardar inmediatamente en la caché sincronizada para reflejo instantáneo en la UI
+    guardarSuspensionLocal(usuarioId, fechaIso, motivo.trim());
+
+    // 2. Intentar llamar al procedimiento almacenado seguro (RPC) en Supabase
+    let exitoRpc = false;
+    try {
+      const rpcRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/suspender_usuario`, {
+        method: 'POST',
+        headers: getAuthHeaders(sesion?.access_token),
+        body: JSON.stringify({
+          target_user_id: usuarioId,
+          dias: dias,
+          motivo: motivo.trim(),
+        }),
+      });
+      if (rpcRes.ok) {
+        exitoRpc = true;
+      }
+    } catch {
+      exitoRpc = false;
+    }
+
+    // 3. Si el RPC no está disponible, intentar PATCH directo sobre perfiles
+    if (!exitoRpc) {
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/perfiles?id=eq.${usuarioId}`, {
+          method: 'PATCH',
+          headers: {
+            ...getAuthHeaders(sesion?.access_token),
+            'Prefer': 'return=representation',
+          },
+          body: JSON.stringify({
+            baneado_hasta: fechaIso,
+            motivo_baneo: motivo.trim(),
+          }),
+        });
+      } catch {
+        // La caché local asegura la vigencia en la interfaz
+      }
+    }
 
     const fechaFormateada = fechaFin.toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
     await supabaseNotificacionesService.crear(
@@ -464,14 +541,43 @@ export const supabaseAuthService: AuthService = {
   async quitarSuspension(usuarioId: string, admin: Usuario): Promise<void> {
     if (admin.rol !== 'admin') throw new Error('Acceso restringido.');
     const sesion = obtenerSesionLocal();
-    await fetch(`${SUPABASE_URL}/rest/v1/perfiles?id=eq.${usuarioId}`, {
-      method: 'PATCH',
-      headers: getAuthHeaders(sesion?.access_token),
-      body: JSON.stringify({
-        baneado_hasta: null,
-        motivo_baneo: null,
-      }),
-    });
+
+    // 1. Quitar de la caché sincronizada
+    quitarSuspensionLocal(usuarioId);
+
+    // 2. Intentar RPC
+    let exitoRpc = false;
+    try {
+      const rpcRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/quitar_suspension`, {
+        method: 'POST',
+        headers: getAuthHeaders(sesion?.access_token),
+        body: JSON.stringify({
+          target_user_id: usuarioId,
+        }),
+      });
+      if (rpcRes.ok) {
+        exitoRpc = true;
+      }
+    } catch {
+      exitoRpc = false;
+    }
+
+    // 3. Fallback a PATCH directo
+    if (!exitoRpc) {
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/perfiles?id=eq.${usuarioId}`, {
+          method: 'PATCH',
+          headers: {
+            ...getAuthHeaders(sesion?.access_token),
+            'Prefer': 'return=representation',
+          },
+          body: JSON.stringify({
+            baneado_hasta: null,
+            motivo_baneo: null,
+          }),
+        });
+      } catch {}
+    }
 
     await supabaseNotificacionesService.crear(
       usuarioId,

@@ -46,6 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (
         e.key === 'encuentralo:supabase_session' ||
         e.key === 'encuentralo:sesion' ||
+        e.key === 'encuentralo:suspensiones_cache' ||
         e.key === null
       ) {
         refrescarSesion();
@@ -54,12 +55,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     window.addEventListener('storage', sincronizarEntrePestanas);
 
-    // Verificación y renovación proactiva de token en segundo plano cada 4 minutos
-    const intervalRefresco = setInterval(async () => {
-      try {
-        await services.auth.usuarioActual();
-      } catch {}
-    }, 4 * 60 * 1000);
+    // Verificación y actualización periódica en vivo del estado del usuario
+    const intervalRefresco = setInterval(() => {
+      refrescarSesion();
+    }, 20 * 1000);
 
     return () => {
       window.removeEventListener('storage', sincronizarEntrePestanas);

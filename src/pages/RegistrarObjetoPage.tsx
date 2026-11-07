@@ -55,9 +55,16 @@ export const RegistrarObjetoPage: React.FC = () => {
   const handleCrear = async (valores: ObjetoValues) => {
     if (!usuario) return;
     if (estaSuspendido) {
-      mostrarToast('Tu cuenta se encuentra suspendida temporalmente.', 'error');
+      mostrarToast('Tu cuenta se encuentra suspendida temporalmente y no tiene permisos para publicar objetos.', 'error');
       return;
     }
+
+    const uActual = await services.auth.usuarioActual().catch(() => usuario);
+    if (!uActual || (uActual.baneadoHasta && new Date(uActual.baneadoHasta) > new Date())) {
+      mostrarToast('Tu cuenta se encuentra suspendida temporalmente por moderación.', 'error');
+      return;
+    }
+
     try {
       const nuevo = await services.objetos.crear(valores, usuario.id);
       mostrarToast('¡Objeto publicado con éxito!', 'exito');
