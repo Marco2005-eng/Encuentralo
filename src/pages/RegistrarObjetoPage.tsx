@@ -6,14 +6,51 @@ import { useToast } from '@/context/ToastContext';
 import type { ObjetoValues } from '@/lib/validaciones';
 import { ObjetoForm } from '@/components/objetos/ObjetoForm';
 import type { TipoReporte } from '@/types/models';
-import { Lock } from 'lucide-react';
+import { Lock, ShieldAlert } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 export const RegistrarObjetoPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const tipoQuery = searchParams.get('tipo') as TipoReporte | null;
-  const { usuario, estaSuspendido } = useAuth();
+  const { usuario, estaSuspendido, motivoSuspension, fechaFinSuspension } = useAuth();
   const { mostrarToast } = useToast();
+
+  if (estaSuspendido) {
+    return (
+      <div className="container-app py-16 max-w-lg text-center animate-fade-in">
+        <div className="card p-8 shadow-xl border-rose-200 bg-rose-50/40">
+          <div className="w-14 h-14 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4 shadow-sm">
+            <ShieldAlert className="w-7 h-7" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">
+            Publicación no autorizada
+          </h2>
+          <p className="text-xs text-rose-800 mb-4 leading-relaxed font-medium">
+            Tu cuenta tiene una suspensión temporal activa y no está autorizada para publicar objetos en la plataforma.
+          </p>
+          <div className="bg-white p-3.5 rounded-xl border border-slate-200 text-xs text-left mb-6 space-y-1.5 shadow-2xs">
+            <p className="text-slate-700">
+              <strong className="text-slate-900">Motivo:</strong> {motivoSuspension || 'Infracción a las normas de convivencia'}
+            </p>
+            <p className="text-slate-700">
+              <strong className="text-slate-900">Vigencia:</strong> Hasta el{' '}
+              {fechaFinSuspension
+                ? new Date(fechaFinSuspension).toLocaleDateString('es-PE', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric',
+                  })
+                : 'próximo aviso'}
+            </p>
+          </div>
+          <Button variant="primary" onClick={() => navigate('/objetos')} className="w-full">
+            Volver al catálogo
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const handleCrear = async (valores: ObjetoValues) => {
     if (!usuario) return;

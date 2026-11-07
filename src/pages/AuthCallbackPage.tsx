@@ -26,7 +26,14 @@ export const AuthCallbackPage: React.FC = () => {
       mostrarToast('¡Sesión con Google iniciada exitosamente!', 'exito');
       navigate(destino, { replace: true });
     } else {
-      mostrarToast('No fue posible completar la autenticación con Google.', 'error');
+      let msg = 'No fue posible completar la autenticación con Google.';
+      try {
+        const errorSuspension = sessionStorage.getItem('encuentralo:error_suspension');
+        if (errorSuspension) {
+          msg = errorSuspension;
+        }
+      } catch {}
+      mostrarToast(msg, 'error');
       navigate('/iniciar-sesion', { replace: true });
     }
   }, [cargando, usuario, navigate, mostrarToast]);

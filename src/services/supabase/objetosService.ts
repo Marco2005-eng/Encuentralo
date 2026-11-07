@@ -97,6 +97,29 @@ export const supabaseObjetosService: ObjetosService = {
   },
 
   async crear(datos: NuevoObjeto, usuarioId: string): Promise<Objeto> {
+    // Verificación estricta de baneo/suspensión antes de publicar
+    const sesion = obtenerSesionLocal();
+    if (sesion?.access_token) {
+      try {
+        const perfilRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/perfiles?id=eq.${usuarioId}&select=baneado_hasta,motivo_baneo`,
+          { headers: getHeaders(sesion.access_token) }
+        );
+        if (perfilRes.ok) {
+          const perfiles = await perfilRes.json();
+          if (perfiles?.[0]?.baneado_hasta && new Date(perfiles[0].baneado_hasta) > new Date()) {
+            throw new Error(
+              'Acceso denegado: Tu cuenta se encuentra suspendida temporalmente y no tiene permisos para publicar objetos.'
+            );
+          }
+        }
+      } catch (err: unknown) {
+        if (err instanceof Error && err.message.includes('Acceso denegado')) {
+          throw err;
+        }
+      }
+    }
+
     let urlImagenFinal: string | null = null;
 
     if (datos.imagen) {

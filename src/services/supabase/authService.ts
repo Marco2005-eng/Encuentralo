@@ -80,7 +80,6 @@ export const supabaseAuthService: AuthService = {
       );
     }
 
-    guardarSesionLocal(data);
     const user = data.user;
 
     let rolReal: 'usuario' | 'admin' = (user.user_metadata?.rol as 'usuario' | 'admin') || 'usuario';
@@ -104,6 +103,27 @@ export const supabaseAuthService: AuthService = {
         }
       }
     } catch {}
+
+    // SI LA CUENTA ESTÁ SUSPENDIDA: Denegar acceso, no guardar sesión y notificar
+    if (baneadoHastaReal && new Date(baneadoHastaReal) > new Date()) {
+      guardarSesionLocal(null);
+      await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+        method: 'POST',
+        headers: getAuthHeaders(data.access_token),
+      }).catch(() => {});
+
+      const fechaFin = new Date(baneadoHastaReal).toLocaleDateString('es-PE', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      });
+      const motivo = motivoBaneoReal || 'Infracción a las normas de convivencia del campus';
+      throw new Error(
+        `Acceso denegado: Tu cuenta se encuentra suspendida hasta el ${fechaFin}. Motivo: ${motivo}.`
+      );
+    }
+
+    guardarSesionLocal(data);
 
     return {
       id: user.id,
@@ -174,6 +194,8 @@ export const supabaseAuthService: AuthService = {
           let rolReal: 'usuario' | 'admin' = (user.user_metadata?.rol as 'usuario' | 'admin') || 'usuario';
           let telefonoReal = user.user_metadata?.telefono || undefined;
           let nombreReal = user.user_metadata?.nombre || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario';
+          let baneadoHastaReal: string | null = null;
+          let motivoBaneoReal: string | null = null;
 
           try {
             const perfilRes = await fetch(`${SUPABASE_URL}/rest/v1/perfiles?id=eq.${user.id}&select=*`, {
@@ -185,10 +207,35 @@ export const supabaseAuthService: AuthService = {
                 if (perfiles[0].rol) rolReal = perfiles[0].rol;
                 if (perfiles[0].nombre) nombreReal = perfiles[0].nombre;
                 if (perfiles[0].telefono) telefonoReal = perfiles[0].telefono;
+                if (perfiles[0].baneado_hasta) baneadoHastaReal = perfiles[0].baneado_hasta;
+                if (perfiles[0].motivo_baneo) motivoBaneoReal = perfiles[0].motivo_baneo;
               }
             }
           } catch {
             // Ignorar y usar user_metadata
+          }
+
+          // Si el usuario que vuelve de Google OAuth está suspendido, invalidar acceso de inmediato
+          if (baneadoHastaReal && new Date(baneadoHastaReal) > new Date()) {
+            guardarSesionLocal(null);
+            await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+              method: 'POST',
+              headers: getAuthHeaders(accessToken),
+            }).catch(() => {});
+
+            const fechaFin = new Date(baneadoHastaReal).toLocaleDateString('es-PE', {
+              day: '2-digit',
+              month: 'long',
+              year: 'numeric',
+            });
+            const motivo = motivoBaneoReal || 'Infracción a las normas de convivencia del campus';
+            try {
+              sessionStorage.setItem(
+                'encuentralo:error_suspension',
+                `Acceso denegado: Tu cuenta se encuentra suspendida hasta el ${fechaFin}. Motivo: ${motivo}.`
+              );
+            } catch {}
+            return null;
           }
 
           return {
@@ -198,6 +245,8 @@ export const supabaseAuthService: AuthService = {
             telefono: telefonoReal,
             rol: rolReal,
             creadoEn: user.created_at || new Date().toISOString(),
+            baneadoHasta: baneadoHastaReal,
+            motivoBaneo: motivoBaneoReal,
           };
         }
       }
@@ -265,6 +314,29 @@ export const supabaseAuthService: AuthService = {
         }
       } catch {
         // Ignorar y usar user_metadata
+      }
+
+      // Si la cuenta tiene una suspensión activa posterior, invalidar la sesión existente
+      if (baneadoHastaReal && new Date(baneadoHastaReal) > new Date()) {
+        guardarSesionLocal(null);
+        await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+          method: 'POST',
+          headers: getAuthHeaders(tokenActual),
+        }).catch(() => {});
+
+        const fechaFin = new Date(baneadoHastaReal).toLocaleDateString('es-PE', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric',
+        });
+        const motivo = motivoBaneoReal || 'Infracción a las normas de convivencia del campus';
+        try {
+          sessionStorage.setItem(
+            'encuentralo:error_suspension',
+            `Acceso denegado: Tu cuenta se encuentra suspendida hasta el ${fechaFin}. Motivo: ${motivo}.`
+          );
+        } catch {}
+        return null;
       }
 
       return {

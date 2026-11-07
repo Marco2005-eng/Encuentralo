@@ -19,6 +19,24 @@ export const supabaseSolicitudesService: SolicitudesService = {
     const sesion = obtenerSesionLocal();
     const token = sesion?.access_token;
 
+    // 0. Validar suspensión del solicitante
+    if (token) {
+      try {
+        const perfilRes = await fetch(
+          `${SUPABASE_URL}/rest/v1/perfiles?id=eq.${usuario.id}&select=baneado_hasta,motivo_baneo`,
+          { headers: getHeaders(token) }
+        );
+        if (perfilRes.ok) {
+          const perfiles = await perfilRes.json();
+          if (perfiles?.[0]?.baneado_hasta && new Date(perfiles[0].baneado_hasta) > new Date()) {
+            throw new Error('Acceso denegado: Tu cuenta está suspendida temporalmente y no puede enviar solicitudes.');
+          }
+        }
+      } catch (err: unknown) {
+        if (err instanceof Error && err.message.includes('Acceso denegado')) throw err;
+      }
+    }
+
     // 1. Validar que no sea el mismo publicador
     const objRes = await fetch(`${SUPABASE_URL}/rest/v1/objetos?id=eq.${objetoId}&select=*`, {
       headers: getHeaders(token),

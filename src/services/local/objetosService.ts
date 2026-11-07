@@ -76,6 +76,16 @@ export const objetosService: ObjetosService = {
   async crear(datos, usuarioId) {
     await latencia();
     inicializarStorageSiVacio();
+
+    // Verificación estricta de baneo/suspensión antes de publicar
+    const usuarios = leer('usuarios');
+    const u = usuarios.find((x) => x.id === usuarioId);
+    if (u?.baneadoHasta && new Date(u.baneadoHasta) > new Date()) {
+      throw new ServiceError(
+        'Acceso denegado: Tu cuenta se encuentra suspendida temporalmente y no tiene permisos para publicar objetos.'
+      );
+    }
+
     const lista = leer('objetos');
     const nuevo: Objeto = {
       ...datos,

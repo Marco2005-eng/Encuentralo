@@ -17,13 +17,14 @@ import {
   MessageCircle,
   HelpCircle,
   ChevronDown,
+  Lock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useChat } from '@/context/ChatContext';
 import { useAyuda } from '@/context/AyudaContext';
 
 export const Header: React.FC = () => {
-  const { usuario, cerrarSesion } = useAuth();
+  const { usuario, cerrarSesion, estaSuspendido } = useAuth();
   const { abrirChat } = useChat();
   const { abrirAyuda } = useAyuda();
   const navigate = useNavigate();
@@ -232,13 +233,25 @@ export const Header: React.FC = () => {
         <div className="hidden md:flex items-center gap-2 lg:gap-3 shrink-0">
           {usuario ? (
             <>
-              {/* Botón CTA Destacado */}
-              <Link to="/objetos/nuevo" className="shrink-0">
-                <Button variant="primary" size="sm" className="gap-1.5 shadow-sm whitespace-nowrap px-3.5">
-                  <PlusCircle className="w-4 h-4" />
-                  Publicar objeto
-                </Button>
-              </Link>
+              {/* Botón CTA Destacado: bloqueado si la cuenta está suspendida */}
+              {!estaSuspendido ? (
+                <Link to="/objetos/nuevo" className="shrink-0">
+                  <Button variant="primary" size="sm" className="gap-1.5 shadow-sm whitespace-nowrap px-3.5">
+                    <PlusCircle className="w-4 h-4" />
+                    Publicar objeto
+                  </Button>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  title="Tu cuenta está suspendida. No puedes publicar objetos."
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 text-rose-600 border border-rose-200 cursor-not-allowed shrink-0"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  Publicación bloqueada
+                </button>
+              )}
 
               {/* Separador vertical */}
               <div className="h-5 w-px bg-slate-200 mx-0.5" aria-hidden="true" />
@@ -644,13 +657,15 @@ export const Header: React.FC = () => {
             </button>
             {usuario ? (
               <>
-                <Link
-                  to="/objetos/nuevo"
-                  onClick={() => setMenuAbierto(false)}
-                  className="p-2.5 rounded-xl font-semibold text-brand-700 bg-brand-50"
-                >
-                  + Publicar objeto
-                </Link>
+                {!estaSuspendido && (
+                  <Link
+                    to="/objetos/nuevo"
+                    onClick={() => setMenuAbierto(false)}
+                    className="p-2.5 rounded-xl font-semibold text-brand-700 bg-brand-50"
+                  >
+                    + Publicar objeto
+                  </Link>
+                )}
                 <Link
                   to="/mis-publicaciones"
                   onClick={() => setMenuAbierto(false)}

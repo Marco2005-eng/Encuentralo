@@ -21,6 +21,14 @@ export const solicitudesService: SolicitudesService = {
   async crear(objetoId, pruebaPertenencia, usuario, pruebaImagen) {
     await latencia();
     inicializarStorageSiVacio();
+
+    // Verificación de suspensión
+    const usuarios = leer('usuarios');
+    const u = usuarios.find((x) => x.id === usuario.id);
+    if (u?.baneadoHasta && new Date(u.baneadoHasta) > new Date()) {
+      throw new ServiceError('Acceso denegado: Tu cuenta está suspendida temporalmente y no puede enviar solicitudes.');
+    }
+
     const objetos = leer('objetos');
     const objeto = objetos.find((o) => o.id === objetoId);
     if (!objeto) throw new ServiceError('El objeto seleccionado no existe.');

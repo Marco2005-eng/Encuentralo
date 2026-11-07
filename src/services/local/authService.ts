@@ -32,8 +32,19 @@ export const authService: AuthService = {
     // Mensaje genérico: no revela si el correo existe.
     if (!u) throw new ServiceError('Correo o contraseña incorrectos. Revisa los datos e inténtalo de nuevo.');
     
-    // Si está suspendido, se permite el acceso en modo restringido para que el usuario
-    // pueda ver el aviso detallado, las notificaciones y el motivo de su sanción en la plataforma.
+    // Regla de Baneo: Si está suspendido, se deniega totalmente el acceso al sistema
+    if (u.baneadoHasta && new Date(u.baneadoHasta) > new Date()) {
+      const fechaFin = new Date(u.baneadoHasta).toLocaleDateString('es-PE', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      });
+      const motivo = u.motivoBaneo || 'Infracción a las normas del campus';
+      throw new ServiceError(
+        `Acceso denegado: Tu cuenta se encuentra suspendida hasta el ${fechaFin}. Motivo: ${motivo}.`
+      );
+    }
+
     escribirValor(SESION, u.id);
     return publico(u);
   },
@@ -53,6 +64,19 @@ export const authService: AuthService = {
       };
       escribir('usuarios', [...leer('usuarios'), usuarioGoogle]);
     }
+
+    if (usuarioGoogle.baneadoHasta && new Date(usuarioGoogle.baneadoHasta) > new Date()) {
+      const fechaFin = new Date(usuarioGoogle.baneadoHasta).toLocaleDateString('es-PE', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+      });
+      const motivo = usuarioGoogle.motivoBaneo || 'Infracción a las normas del campus';
+      throw new ServiceError(
+        `Acceso denegado: Tu cuenta se encuentra suspendida hasta el ${fechaFin}. Motivo: ${motivo}.`
+      );
+    }
+
     escribirValor(SESION, usuarioGoogle.id);
   },
 
@@ -65,7 +89,15 @@ export const authService: AuthService = {
     const id = leerValor(SESION);
     if (!id) return null;
     const u = leer('usuarios').find((x) => x.id === id);
-    return u ? publico(u) : null;
+    if (!u) return null;
+
+    // Si la cuenta tiene una suspensión activa posterior, invalidar la sesión
+    if (u.baneadoHasta && new Date(u.baneadoHasta) > new Date()) {
+      escribirValor(SESION, null);
+      return null;
+    }
+
+    return publico(u);
   },
 
   async actualizarPerfil({ nombre, telefono }) {

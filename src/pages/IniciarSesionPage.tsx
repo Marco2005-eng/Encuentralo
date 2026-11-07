@@ -18,6 +18,17 @@ export const IniciarSesionPage: React.FC = () => {
   const [errorGlobal, setErrorGlobal] = useState<string | null>(null);
   const [cargandoGoogle, setCargandoGoogle] = useState(false);
 
+  // Leer aviso de suspensión si fue rebotado de OAuth o sesión invalidada
+  React.useEffect(() => {
+    try {
+      const errorSuspension = sessionStorage.getItem('encuentralo:error_suspension');
+      if (errorSuspension) {
+        sessionStorage.removeItem('encuentralo:error_suspension');
+        setErrorGlobal(errorSuspension);
+      }
+    } catch {}
+  }, []);
+
   // Ruta original a la que quería entrar el usuario antes del guard
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/objetos';
 
@@ -35,10 +46,14 @@ export const IniciarSesionPage: React.FC = () => {
       const u = await iniciarSesion(valores.correo, valores.contrasena);
       const estaBaneado = Boolean(u?.baneadoHasta && new Date(u.baneadoHasta) > new Date());
       if (estaBaneado) {
-        mostrarToast('Ingresaste en modo restringido. Revisa el aviso de suspensión.', 'info');
-      } else {
-        mostrarToast('¡Sesión iniciada correctamente!', 'exito');
+        setErrorGlobal(
+          `Acceso denegado: Tu cuenta se encuentra suspendida temporalmente hasta el ${new Date(
+            u.baneadoHasta!
+          ).toLocaleDateString('es-PE')}. Motivo: ${u.motivoBaneo || 'Infracción a las normas del campus'}.`
+        );
+        return;
       }
+      mostrarToast('¡Sesión iniciada correctamente!', 'exito');
       navigate(from, { replace: true });
     } catch (err: unknown) {
       if (err instanceof Error) setErrorGlobal(err.message);
