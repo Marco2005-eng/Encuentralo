@@ -10,7 +10,7 @@ export const ObjetoCard: React.FC<{ objeto: Objeto }> = ({ objeto }) => {
   return (
     <Link
       to={`/objetos/${objeto.id}`}
-      className="group card flex flex-col overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-card-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600 focus-visible:outline-offset-2"
+      className="object-card group card flex flex-col overflow-hidden transition-[transform,box-shadow] duration-200 motion-reduce:hover:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600 focus-visible:outline-offset-2"
     >
       {/* Imagen o Placeholder: vista integrada y natural sin bordes duros */}
       <div className="relative h-48 sm:h-52 w-full bg-slate-50/70 flex items-center justify-center overflow-hidden">
@@ -25,7 +25,7 @@ export const ObjetoCard: React.FC<{ objeto: Objeto }> = ({ objeto }) => {
 
             {/* Contenedor con máscara de difuminado radial en el contorno: elimina las líneas duras rectangulares */}
             <div
-              className="relative z-10 w-full h-full flex items-center justify-center p-3 transition-transform duration-300 group-hover:scale-105"
+              className="relative z-10 w-full h-full flex items-center justify-center p-3 transition-transform duration-200 group-hover:scale-105 motion-reduce:transform-none"
               style={{
                 WebkitMaskImage:
                   'radial-gradient(ellipse 88% 88% at 50% 50%, black 65%, transparent 100%)',
@@ -62,17 +62,17 @@ export const ObjetoCard: React.FC<{ objeto: Objeto }> = ({ objeto }) => {
       </div>
 
       {/* Contenido */}
-      <div className="flex-1 p-5 flex flex-col justify-between">
+      <div className="flex-1 p-6 flex flex-col justify-between">
         <div>
-          <h3 className="text-base font-bold text-slate-900 group-hover:text-brand-600 transition-colors line-clamp-1 mb-1.5">
+          <h3 className="text-base font-bold text-slate-900 group-hover:text-brand-600 transition-colors line-clamp-2 mb-2 break-words">
             {objeto.nombre}
           </h3>
-          <p className="text-xs text-slate-600 line-clamp-2 mb-4 leading-relaxed">
+          <p className="text-[13px] text-slate-600 line-clamp-2 [overflow-wrap:anywhere] mb-4 leading-relaxed">
             {objeto.descripcion}
           </p>
         </div>
 
-        <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+        <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
           <span className="flex items-center gap-1 truncate max-w-[55%]">
             <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <span className="truncate">{objeto.ubicacion}</span>

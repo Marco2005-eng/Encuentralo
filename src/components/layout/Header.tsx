@@ -176,7 +176,9 @@ export const Header: React.FC = () => {
     }`;
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
+    <>
+    <div className="h-16 shrink-0" aria-hidden="true" />
+    <header className="site-header fixed inset-x-0 top-0 z-40 w-full border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
       <div className="container-app flex h-16 items-center justify-between gap-2 sm:gap-4">
         {/* Identidad y Navegación izquierda */}
         <div className="flex items-center gap-3 lg:gap-5 shrink-0">
@@ -722,5 +724,6 @@ export const Header: React.FC = () => {
         </div>
       )}
     </header>
+    </>
   );
 };

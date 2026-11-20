@@ -17,7 +17,7 @@ export const Badge: React.FC<BadgeProps> = ({ estado, className = '' }) => {
       bg: 'bg-rose-50',
       text: 'text-rose-800',
       border: 'border-rose-200',
-      icon: <SearchX className="w-3.5 h-3.5" aria-hidden="true" />,
+      icon: <SearchX className="lost-status-icon w-3.5 h-3.5" aria-hidden="true" />,
     },
     encontrado: {
       label: ESTADO_OBJETO_LABEL.encontrado,

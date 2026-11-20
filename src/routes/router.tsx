@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
+import { InformacionPage } from '@/pages/InformacionPage';
 import { InicioPage } from '@/pages/InicioPage';
 import { IniciarSesionPage } from '@/pages/IniciarSesionPage';
 import { RegistroPage } from '@/pages/RegistroPage';
@@ -21,6 +22,8 @@ export const router = createBrowserRouter([
     element: <Layout />,
     children: [
       { index: true, element: <InicioPage /> },
+      { path: 'privacidad', element: <InformacionPage tipo="privacidad" /> },
+      { path: 'terminos', element: <InformacionPage tipo="terminos" /> },
       {
         path: 'iniciar-sesion',
         element: (

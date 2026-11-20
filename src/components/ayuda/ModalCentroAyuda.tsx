@@ -1,407 +1,133 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from '@/components/ui/Modal';
 import { useAyuda } from '@/context/AyudaContext';
-import {
-  PASOS_PERDI,
-  PASOS_ENCONTRE,
-  PREGUNTAS_FRECUENTES,
-  ESTADOS_INFO,
-} from '@/lib/ayudaContenido';
-import {
-  Search,
-  X,
-  ChevronDown,
-  ChevronUp,
-  ArrowRight,
-  ArrowLeft,
-  ShieldAlert,
-  HelpCircle,
-  PackageCheck,
-  AlertCircle,
-} from 'lucide-react';
+import { PASOS_PERDI, PASOS_ENCONTRE, PREGUNTAS_FRECUENTES, ESTADOS_INFO } from '@/lib/ayudaContenido';
+import { Search, X, ChevronDown, ArrowRight, ArrowLeft, ShieldCheck, HelpCircle, PackageCheck, SearchX, ListChecks, BookOpen } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+
+type Seccion = 'inicio' | 'perdi' | 'encontre' | 'preguntas' | 'estados';
+const TEMAS = [
+  { id: 'inicio', label: 'Empezar aquí', icon: HelpCircle },
+  { id: 'perdi', label: 'Perdí algo', icon: SearchX },
+  { id: 'encontre', label: 'Encontré algo', icon: PackageCheck },
+  { id: 'preguntas', label: 'Preguntas frecuentes', icon: BookOpen },
+  { id: 'estados', label: 'Estados del objeto', icon: ListChecks },
+] as const;
+const normalizar = (texto: string) => texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
 export const ModalCentroAyuda: React.FC = () => {
   const { modalAbierto, cerrarAyuda, rolInicial } = useAyuda();
   const navigate = useNavigate();
-
-  // Modo de rol seleccionado: null (pantalla inicial con 2 tarjetas) | 'perdi' | 'encontre'
-  const [rolSeleccionado, setRolSeleccionado] = useState<'perdi' | 'encontre' | null>(null);
-
-  // Buscador en tiempo real
+  const [seccion, setSeccion] = useState<Seccion>('inicio');
   const [busqueda, setBusqueda] = useState('');
-
-  // Acordeón abierto
-  const [faqAbierta, setFaqAbierta] = useState<string | null>(null);
-  const [estadosAbierto, setEstadosAbierto] = useState<boolean>(false);
-
-  // Sincronizar rol inicial si se pasó al abrir
+  const [pasoActual, setPasoActual] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const contenidoRef = useRef<HTMLElement>(null);
   useEffect(() => {
-    if (rolInicial) {
-      setRolSeleccionado(rolInicial);
-    } else {
-      setRolSeleccionado(null);
-    }
+    if (!modalAbierto) return;
+    setSeccion(rolInicial || 'inicio');
     setBusqueda('');
-    setFaqAbierta(null);
-    setEstadosAbierto(false);
+    setPasoActual(0);
   }, [modalAbierto, rolInicial]);
-
-  // Filtrado reactivo en tiempo real de preguntas frecuentes
-  const faqsFiltradas = useMemo(() => {
-    if (!busqueda.trim()) return PREGUNTAS_FRECUENTES;
-    const q = busqueda.toLowerCase().trim();
-    return PREGUNTAS_FRECUENTES.filter(
-      (f) =>
-        f.pregunta.toLowerCase().includes(q) ||
-        f.respuesta.toLowerCase().includes(q)
-    );
-  }, [busqueda]);
-
-  // Pasos filtrados por búsqueda
-  const pasosPerdiFiltrados = useMemo(() => {
-    if (!busqueda.trim()) return PASOS_PERDI;
-    const q = busqueda.toLowerCase().trim();
-    return PASOS_PERDI.filter(
-      (p) =>
-        p.titulo.toLowerCase().includes(q) ||
-        p.descripcion.toLowerCase().includes(q) ||
-        p.consejo?.toLowerCase().includes(q)
-    );
-  }, [busqueda]);
-
-  const pasosEncontreFiltrados = useMemo(() => {
-    if (!busqueda.trim()) return PASOS_ENCONTRE;
-    const q = busqueda.toLowerCase().trim();
-    return PASOS_ENCONTRE.filter(
-      (p) =>
-        p.titulo.toLowerCase().includes(q) ||
-        p.descripcion.toLowerCase().includes(q) ||
-        p.consejo?.toLowerCase().includes(q)
-    );
-  }, [busqueda]);
-
-  const toggleFaq = (id: string) => {
-    setFaqAbierta((prev) => (prev === id ? null : id));
+  const consulta = normalizar(busqueda);
+  const resultados = useMemo(() => {
+    const coincide = (texto: string) => normalizar(texto).includes(consulta);
+    return {
+      preguntas: PREGUNTAS_FRECUENTES.filter(f => coincide(f.pregunta + ' ' + f.respuesta)),
+      pasos: [
+        ...PASOS_PERDI.map((p, index) => ({ ...p, guia: 'perdi' as const, index, contexto: 'Perdí algo' })),
+        ...PASOS_ENCONTRE.map((p, index) => ({ ...p, guia: 'encontre' as const, index, contexto: 'Encontré algo' })),
+      ].filter(p => coincide(p.contexto + ' ' + p.titulo + ' ' + p.descripcion + ' ' + (p.consejo || ''))),
+      estados: ESTADOS_INFO.filter(e => coincide(e.etiqueta + ' ' + e.descripcion)),
+    };
+  }, [consulta]);
+  const total = resultados.preguntas.length + resultados.pasos.length + resultados.estados.length;
+  const irA = (ruta: string) => { cerrarAyuda(); navigate(ruta); };
+  const abrirSeccion = (id: Seccion, paso = 0) => {
+    setSeccion(id); setBusqueda(''); setPasoActual(paso);
+    contenidoRef.current?.focus({ preventScroll: true });
   };
+  const esGuia = seccion === 'perdi' || seccion === 'encontre';
+  const pasos = seccion === 'encontre' ? PASOS_ENCONTRE : PASOS_PERDI;
+  const paso = pasos[pasoActual];
+  const rutasGuia = seccion === 'encontre'
+    ? ['/objetos/nuevo?tipo=encontrado', '/objetos/nuevo?tipo=encontrado', '/mis-publicaciones']
+    : ['/objetos', '/objetos', '/mis-solicitudes'];
+  const accionesGuia = seccion === 'encontre'
+    ? ['Publicar objeto encontrado', 'Publicar objeto encontrado', 'Ver mis publicaciones']
+    : ['Buscar en el catálogo', 'Buscar en el catálogo', 'Ver mis solicitudes'];
 
-  const handleIrA = (ruta: string) => {
-    cerrarAyuda();
-    navigate(ruta);
-  };
+  const preguntas = (lista: typeof PREGUNTAS_FRECUENTES) => lista.map(faq => (
+    <details key={faq.id} className="help-question rounded-xl border border-slate-200 bg-white">
+      <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between gap-4 p-4 text-left text-sm font-semibold text-slate-900 hover:bg-slate-50 rounded-xl">
+        {faq.pregunta}<ChevronDown className="help-chevron h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
+      </summary>
+      <div className="border-t border-slate-100 px-4 py-4 text-sm leading-7 text-slate-600 whitespace-pre-line">{faq.respuesta}</div>
+    </details>
+  ));
+  const estados = (lista: typeof ESTADOS_INFO) => lista.map(item => (
+    <div key={item.estado} className="rounded-xl border border-slate-200 bg-white p-4">
+      <Badge estado={item.estado} /><p className="mt-3 text-sm leading-relaxed text-slate-600">{item.descripcion}</p>
+    </div>
+  ));
 
-  return (
-    <Modal
-      abierto={modalAbierto}
-      alCerrar={cerrarAyuda}
-      titulo="Centro de Ayuda"
-      anchoMax="max-w-2xl"
-    >
-      <div className="flex flex-col gap-6 text-slate-800">
-        {/* Buscador reactivo en tiempo real */}
+  return <Modal abierto={modalAbierto} alCerrar={cerrarAyuda} titulo="Centro de ayuda" anchoMax="max-w-4xl">
+    <div className="help-center text-slate-800">
+      <div className="sticky -top-4 sm:-top-6 z-10 bg-white pb-4 pt-1">
+        <label htmlFor="help-search" className="mb-2 block text-sm font-semibold text-slate-800">¿En qué podemos ayudarte?</label>
         <div className="relative">
-          <Search className="w-5 h-5 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Escribe tu duda (ej: prueba privada, chat, qué no incluir, entrega)..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="w-full pl-11 pr-10 py-3 bg-slate-50 hover:bg-white focus:bg-white rounded-2xl text-sm border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-brand-600 shadow-sm transition-all"
-            aria-label="Buscar en el centro de ayuda"
-          />
-          {busqueda && (
-            <button
-              type="button"
-              onClick={() => setBusqueda('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1"
-              aria-label="Limpiar campo de búsqueda"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" aria-hidden="true" />
+          <input ref={inputRef} id="help-search" type="search" autoComplete="off" placeholder="Buscar: chat, entrega, privacidad…" value={busqueda} onChange={e => setBusqueda(e.target.value)} className="help-search min-h-[48px] w-full rounded-xl border border-slate-300 bg-slate-50 pl-12 pr-12 text-sm text-slate-900 placeholder:text-slate-500 focus:bg-white" />
+          {busqueda && <button type="button" onClick={() => { setBusqueda(''); inputRef.current?.focus(); }} aria-label="Limpiar búsqueda de ayuda" className="absolute right-1 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100"><X className="h-4 w-4" aria-hidden="true" /></button>}
         </div>
-
-        {/* MODO RESULTADOS DE BÚSQUEDA DIRECTOS */}
-        {busqueda ? (
-          <div className="space-y-4 animate-fade-in">
-            <div className="flex items-center justify-between text-xs font-semibold text-slate-600 border-b border-slate-200 pb-2">
-              <span>Coincidencias encontradas ({faqsFiltradas.length + (pasosPerdiFiltrados.length > 0 ? 1 : 0) + (pasosEncontreFiltrados.length > 0 ? 1 : 0)})</span>
-              <button
-                type="button"
-                onClick={() => setBusqueda('')}
-                className="text-brand-700 hover:underline"
-              >
-                Limpiar búsqueda
-              </button>
-            </div>
-
-            {faqsFiltradas.length === 0 && pasosPerdiFiltrados.length === 0 && pasosEncontreFiltrados.length === 0 ? (
-              <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200">
-                <HelpCircle className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                <p className="text-sm font-bold text-slate-800">No encontramos coincidencias para esa consulta</p>
-                <p className="text-sm text-slate-600 mt-1">
-                  Intenta con términos más simples como "prueba", "entrega", "celular", "seguridad" o "vigilancia".
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {faqsFiltradas.map((faq) => {
-                  const abierta = faqAbierta === faq.id;
-                  return (
-                    <div
-                      key={faq.id}
-                      className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => toggleFaq(faq.id)}
-                        className="w-full flex items-center justify-between p-4 text-left text-sm font-bold text-slate-900 hover:bg-slate-50 transition-colors gap-3"
-                      >
-                        <span>{faq.pregunta}</span>
-                        {abierta ? (
-                          <ChevronUp className="w-4 h-4 text-slate-500 shrink-0" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
-                        )}
-                      </button>
-                      {abierta && (
-                        <div className="px-4 pb-4 text-sm text-slate-700 leading-relaxed border-t border-slate-100 pt-3 bg-slate-50/50 whitespace-pre-line">
-                          {faq.respuesta}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        ) : (
-          /* MODO PRINCIPAL: ¿QUÉ NECESITAS HACER? */
-          <div className="space-y-6">
-            {!rolSeleccionado ? (
-              /* PASO 0: DOS TARJETAS GRANDES */
-              <div className="space-y-4 animate-fade-in">
-                <div className="text-center sm:text-left">
-                  <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">
-                    ¿Qué necesitas hacer hoy?
-                  </h3>
-                  <p className="text-sm text-slate-600 mt-0.5">
-                    Selecciona una opción para guiarte en pocos pasos:
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Tarjeta Perdí algo */}
-                  <button
-                    type="button"
-                    onClick={() => setRolSeleccionado('perdi')}
-                    className="group flex flex-col items-start p-5 rounded-2xl border-2 border-rose-100 hover:border-rose-400 bg-rose-50/40 hover:bg-rose-50 transition-all text-left shadow-sm hover:shadow-md focus:outline-none focus:ring-4 focus:ring-rose-200"
-                  >
-                    <div className="w-11 h-11 rounded-2xl bg-rose-600 text-white flex items-center justify-center mb-3 shadow-md group-hover:scale-105 transition-transform">
-                      <AlertCircle className="w-6 h-6" />
-                    </div>
-                    <h4 className="text-base font-extrabold text-slate-900 mb-1 group-hover:text-rose-800 transition-colors">
-                      Perdí algo
-                    </h4>
-                    <p className="text-sm text-slate-700 leading-relaxed">
-                      Quiero buscar en el catálogo o saber cómo acreditar que un objeto encontrado me pertenece.
-                    </p>
-                    <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-rose-700 group-hover:translate-x-1 transition-transform">
-                      Ver cómo recuperarlo &rarr;
-                    </span>
-                  </button>
-
-                  {/* Tarjeta Encontré algo */}
-                  <button
-                    type="button"
-                    onClick={() => setRolSeleccionado('encontre')}
-                    className="group flex flex-col items-start p-5 rounded-2xl border-2 border-emerald-100 hover:border-emerald-400 bg-emerald-50/40 hover:bg-emerald-50 transition-all text-left shadow-sm hover:shadow-md focus:outline-none focus:ring-4 focus:ring-emerald-200"
-                  >
-                    <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center mb-3 shadow-md group-hover:scale-105 transition-transform">
-                      <PackageCheck className="w-6 h-6" />
-                    </div>
-                    <h4 className="text-base font-extrabold text-slate-900 mb-1 group-hover:text-emerald-800 transition-colors">
-                      Encontré algo
-                    </h4>
-                    <p className="text-sm text-slate-700 leading-relaxed">
-                      Hallé un artículo en el campus y deseo publicarlo de forma segura para devolverlo a su dueño.
-                    </p>
-                    <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-emerald-700 group-hover:translate-x-1 transition-transform">
-                      Ver cómo reportarlo &rarr;
-                    </span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              /* PASO GUIADO SELECCIONADO (Perdí o Encontré) */
-              <div className="space-y-4 animate-fade-in">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                  <button
-                    type="button"
-                    onClick={() => setRolSeleccionado(null)}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    Volver a elegir opción
-                  </button>
-
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    {rolSeleccionado === 'perdi' ? 'Paso a paso: Si perdiste algo' : 'Paso a paso: Si encontraste algo'}
-                  </span>
-                </div>
-
-                {/* Lista de pasos unificada */}
-                <div className="space-y-3">
-                  {(rolSeleccionado === 'perdi' ? PASOS_PERDI : PASOS_ENCONTRE).map((paso) => (
-                    <div
-                      key={paso.numero}
-                      className="p-4 rounded-2xl border border-slate-200 bg-white shadow-sm flex items-start gap-3.5"
-                    >
-                      <div
-                        className={`w-8 h-8 rounded-xl font-black text-sm flex items-center justify-center shrink-0 shadow-sm ${
-                          rolSeleccionado === 'perdi'
-                            ? 'bg-rose-600 text-white'
-                            : 'bg-emerald-600 text-white'
-                        }`}
-                      >
-                        {paso.numero}
-                      </div>
-                      <div className="space-y-1">
-                        <h4 className="text-sm font-extrabold text-slate-900">
-                          {paso.titulo}
-                        </h4>
-                        <p className="text-sm text-slate-700 leading-relaxed">
-                          {paso.descripcion}
-                        </p>
-                        {paso.consejo && (
-                          <p className="text-xs text-slate-500 font-medium pt-0.5">
-                            💡 {paso.consejo}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* ÚNICO CTA PRINCIPAL SEGÚN EL ROL ELEGIDO */}
-                <div className="pt-2 flex justify-end">
-                  {rolSeleccionado === 'perdi' ? (
-                    <Button
-                      type="button"
-                      variant="primary"
-                      size="md"
-                      onClick={() => handleIrA('/objetos')}
-                      className="gap-2 text-sm font-bold shadow-md"
-                    >
-                      Buscar en el Catálogo
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="primary"
-                      size="md"
-                      onClick={() => handleIrA('/objetos/nuevo?tipo=encontrado')}
-                      className="gap-2 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 shadow-md"
-                    >
-                      Publicar objeto encontrado
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* SECCIÓN PREGUNTAS FRECUENTES (FAQ & SEGURIDAD) */}
-            <div className="pt-4 border-t border-slate-200 space-y-3">
-              <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
-                Preguntas frecuentes
-              </h3>
-
-              <div className="space-y-2.5">
-                {PREGUNTAS_FRECUENTES.map((faq) => {
-                  const abierta = faqAbierta === faq.id;
-                  return (
-                    <div
-                      key={faq.id}
-                      className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => toggleFaq(faq.id)}
-                        className="w-full flex items-center justify-between p-3.5 text-left text-sm font-bold text-slate-900 hover:bg-slate-50 transition-colors gap-3"
-                      >
-                        <span>{faq.pregunta}</span>
-                        {abierta ? (
-                          <ChevronUp className="w-4 h-4 text-slate-500 shrink-0" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
-                        )}
-                      </button>
-                      {abierta && (
-                        <div className="px-3.5 pb-3.5 text-sm text-slate-700 leading-relaxed border-t border-slate-100 pt-2.5 bg-slate-50/50 whitespace-pre-line">
-                          {faq.respuesta}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {/* Acordeón especial: ¿Qué significa cada estado? */}
-                <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
-                  <button
-                    type="button"
-                    onClick={() => setEstadosAbierto((prev) => !prev)}
-                    className="w-full flex items-center justify-between p-3.5 text-left text-sm font-bold text-slate-900 hover:bg-slate-50 transition-colors gap-3"
-                  >
-                    <span>¿Qué significa cada estado de una publicación?</span>
-                    {estadosAbierto ? (
-                      <ChevronUp className="w-4 h-4 text-slate-500 shrink-0" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
-                    )}
-                  </button>
-                  {estadosAbierto && (
-                    <div className="p-3.5 border-t border-slate-100 bg-slate-50/50 space-y-3">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        {ESTADOS_INFO.map((item) => (
-                          <div
-                            key={item.estado}
-                            className="p-3 rounded-xl border border-slate-200 bg-white flex flex-col gap-1.5"
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold text-slate-900">{item.etiqueta}</span>
-                              <Badge estado={item.estado} />
-                            </div>
-                            <p className="text-xs text-slate-600 leading-relaxed">
-                              {item.descripcion}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* AVISO VISIBLE: SALIDA DE EMERGENCIA CON PERSONAL DE VIGILANCIA */}
-            <div className="p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-950 flex items-start gap-3 shadow-sm">
-              <ShieldAlert className="w-6 h-6 text-amber-700 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <h4 className="text-sm font-extrabold text-amber-950">
-                  ¿No encuentras lo que buscabas o necesitas ayuda urgente?
-                </h4>
-                <p className="text-sm text-amber-900 leading-relaxed font-medium">
-                  Acércate directamente a la <strong>Caseta de Vigilancia Central</strong> (atención 24/7 en la entrada principal del campus). El personal de seguridad custodia objetos de valor y documentos no reclamados.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
-    </Modal>
-  );
+      <div className="grid items-start gap-6 md:grid-cols-[184px_minmax(0,1fr)] md:gap-8">
+        <nav aria-label="Temas del centro de ayuda" className="grid grid-cols-2 gap-2 md:flex md:flex-col">
+          {TEMAS.map(({ id, label, icon: Icon }) => <button key={id} type="button" onClick={() => abrirSeccion(id)} aria-pressed={!consulta && seccion === id} className={'help-topic flex min-h-[48px] items-center gap-2 rounded-xl border px-3 py-3 text-left text-[13px] font-semibold ' + (!consulta && seccion === id ? 'border-brand-200 bg-brand-50 text-brand-800' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50')}>
+            <Icon className="h-5 w-5 shrink-0" aria-hidden="true" /><span>{label}</span>
+          </button>)}
+        </nav>
+        <section ref={contenidoRef} tabIndex={-1} aria-label="Contenido de ayuda" className="help-content min-w-0 space-y-6 rounded-xl">
+          {consulta ? <>
+            <p role="status" aria-live="polite" className="text-sm font-semibold text-slate-600">{total} {total === 1 ? 'resultado' : 'resultados'} para «{busqueda.trim()}»</p>
+            {total === 0 ? <div className="rounded-2xl border border-indigo-200 bg-indigo-50/50 p-6 text-center">
+              <SearchX className="mx-auto mb-4 h-10 w-10 text-brand-700" aria-hidden="true" />
+              <h3 className="text-base font-bold">No encontramos esa consulta</h3><p className="mt-2 text-sm leading-relaxed text-slate-600">Prueba con “chat”, “entrega” o “privacidad”, o elige un tema del menú.</p>
+              <Button className="mt-4" variant="outline" onClick={() => {setBusqueda(''); inputRef.current?.focus();}}>Limpiar búsqueda</Button>
+            </div> : <>
+              {resultados.pasos.length > 0 && <div className="space-y-3"><h3 className="text-base font-bold">Guías paso a paso</h3>{resultados.pasos.map(p => <button type="button" key={p.guia + p.numero} onClick={() => abrirSeccion(p.guia, p.index)} className="flex min-h-[48px] w-full items-center justify-between gap-4 rounded-xl border border-slate-200 p-4 text-left hover:bg-brand-50"><span><span className="block text-[13px] text-slate-500">{p.contexto} · Paso {p.numero}</span><span className="text-sm font-semibold">{p.titulo}</span></span><ArrowRight className="h-4 w-4 shrink-0 text-brand-700" aria-hidden="true" /></button>)}</div>}
+              {resultados.preguntas.length > 0 && <div className="space-y-3"><h3 className="text-base font-bold">Preguntas frecuentes</h3>{preguntas(resultados.preguntas)}</div>}
+              {resultados.estados.length > 0 && <div className="space-y-3"><h3 className="text-base font-bold">Estados del objeto</h3>{estados(resultados.estados)}</div>}
+            </>}
+          </> : seccion === 'inicio' ? <>
+            <div><h3 className="text-xl font-bold">Elige lo que necesitas hacer</h3><p className="mt-2 text-sm leading-relaxed text-slate-600">Te guiamos desde el reporte hasta la devolución.</p></div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <button type="button" onClick={() => abrirSeccion('perdi')} className="help-choice rounded-2xl border border-rose-200 bg-rose-50 p-5 text-left hover:bg-rose-100"><SearchX className="mb-4 h-8 w-8 text-rose-700" aria-hidden="true" /><span className="block text-base font-bold text-slate-900">Perdí algo</span><span className="mt-2 block text-sm leading-relaxed text-slate-600">Busca tu objeto y aprende a solicitar su recuperación.</span><span className="mt-4 flex items-center gap-2 text-sm font-semibold text-rose-800">Ver guía <ArrowRight className="h-4 w-4" aria-hidden="true" /></span></button>
+              <button type="button" onClick={() => abrirSeccion('encontre')} className="help-choice rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-left hover:bg-emerald-100"><PackageCheck className="mb-4 h-8 w-8 text-emerald-700" aria-hidden="true" /><span className="block text-base font-bold text-slate-900">Encontré algo</span><span className="mt-2 block text-sm leading-relaxed text-slate-600">Publica el hallazgo y coordina la entrega con su dueño.</span><span className="mt-4 flex items-center gap-2 text-sm font-semibold text-emerald-800">Ver guía <ArrowRight className="h-4 w-4" aria-hidden="true" /></span></button>
+            </div>
+            <div className="rounded-xl bg-slate-50 p-4 text-sm leading-relaxed text-slate-600"><strong className="text-slate-800">¿Ya enviaste una solicitud?</strong><p className="mt-1">Consulta su estado en Mis solicitudes. Si fue aprobada, abre el chat de entrega desde la barra superior.</p><button type="button" onClick={() => irA('/mis-solicitudes')} className="mt-2 inline-flex min-h-[44px] items-center gap-2 font-semibold text-brand-700 hover:underline">Ver mis solicitudes <ArrowRight className="h-4 w-4" aria-hidden="true" /></button></div>
+          </> : esGuia ? <>
+            <div><h3 className="text-xl font-bold">{seccion === 'perdi' ? 'Cómo recuperar tu objeto' : 'Cómo devolver un objeto'}</h3><p className="mt-2 text-sm text-slate-600">Elige un paso para consultarlo o avanza con Siguiente.</p></div>
+            <div role="group" aria-label="Pasos de la guía" className="grid grid-cols-3 gap-2">{pasos.map((p, index) => <button key={p.numero} type="button" onClick={() => setPasoActual(index)} aria-current={pasoActual === index ? 'step' : undefined} className={'min-h-[44px] rounded-lg border px-3 py-2 text-sm font-semibold ' + (pasoActual === index ? 'border-brand-700 bg-brand-700 text-white' : 'border-slate-200 text-slate-600 hover:bg-slate-50')}>Paso {p.numero}</button>)}</div>
+            <div aria-live="polite" aria-atomic="true" className="rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
+              <p className="text-[13px] font-semibold text-brand-700">Paso {paso.numero} de {pasos.length}</p><h4 className="mt-2 text-lg font-bold text-slate-900">{paso.titulo}</h4><p className="mt-4 text-sm leading-7 text-slate-700">{paso.descripcion}</p>
+              {paso.consejo && <p className="mt-4 border-l-2 border-brand-300 pl-3 text-sm leading-relaxed text-slate-600">{paso.consejo}</p>}
+            </div>
+            <div className="flex justify-between gap-4"><Button variant="outline" disabled={pasoActual === 0} onClick={() => setPasoActual(p => p - 1)}><ArrowLeft className="h-4 w-4" aria-hidden="true" /> Anterior</Button><Button variant="outline" disabled={pasoActual === pasos.length - 1} onClick={() => setPasoActual(p => p + 1)}>Siguiente <ArrowRight className="h-4 w-4" aria-hidden="true" /></Button></div>
+            <Button className="w-full" onClick={() => irA(rutasGuia[pasoActual])}>{accionesGuia[pasoActual]}<ArrowRight className="h-4 w-4" aria-hidden="true" /></Button>
+          </> : seccion === 'preguntas' ? <>
+            <div><h3 className="text-xl font-bold">Preguntas frecuentes</h3><p className="mt-2 text-sm text-slate-600">Pulsa una pregunta para ver la respuesta.</p></div><div className="space-y-3">{preguntas(PREGUNTAS_FRECUENTES)}</div>
+          </> : <>
+            <div><h3 className="text-xl font-bold">Estados de una publicación</h3><p className="mt-2 text-sm text-slate-600">Consulta qué significa la etiqueta de cada objeto.</p></div><div className="grid gap-4 sm:grid-cols-2">{estados(ESTADOS_INFO)}</div>
+          </>}
+        </section>
+      </div>
+      <div className="mt-8 flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="flex max-w-md items-start gap-2 text-[13px] leading-relaxed text-slate-600"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />Si necesitas apoyo presencial, consulta a vigilancia y confirma la atención de tu sede.</p>
+        <button type="button" onClick={() => irA('/privacidad')} className="inline-flex min-h-[44px] shrink-0 items-center text-sm font-semibold text-brand-700 hover:underline">Privacidad y uso de datos</button>
+      </div>
+    </div>
+  </Modal>;
 };
