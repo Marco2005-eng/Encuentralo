@@ -69,14 +69,14 @@ export const RegistroPage: React.FC = () => {
   };
 
   return (
-    <div className="container-app py-12 flex-1 flex flex-col items-center justify-center">
-      <div className="w-full max-w-md card p-8 shadow-xl">
+    <div className="container-app py-10 sm:py-16 flex-1 flex flex-col items-center justify-center">
+      <div className="w-full max-w-md card p-6 sm:p-8 shadow-card border-slate-200/80 bg-white">
         <div className="text-center mb-6">
-          <div className="w-12 h-12 bg-brand-50 text-brand-600 rounded-2xl mx-auto flex items-center justify-center mb-3">
+          <div className="w-12 h-12 bg-brand-50 text-brand-600 rounded-2xl mx-auto flex items-center justify-center mb-3 shadow-2xs border border-brand-100">
             <UserPlus className="w-6 h-6" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Crear una cuenta</h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Crear una cuenta</h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Únete a la red institucional para reportar o encontrar pertenencias
           </p>
         </div>

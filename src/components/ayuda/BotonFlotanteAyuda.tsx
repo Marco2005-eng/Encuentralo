@@ -43,7 +43,7 @@ export const BotonFlotanteAyuda: React.FC = () => {
   return (
     <aside
       aria-label="Botón de ayuda rápida"
-      className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-3.5 sm:bottom-6 sm:right-6 z-40 print:hidden pointer-events-auto"
+      className="fixed bottom-20 md:bottom-6 right-3.5 sm:right-6 z-40 print:hidden pointer-events-auto"
     >
       <button
         type="button"

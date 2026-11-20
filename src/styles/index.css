@@ -5,9 +5,11 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   body {
-    @apply bg-slate-50 font-sans text-slate-900 antialiased overflow-x-hidden;
+    @apply bg-slate-50/80 font-sans text-slate-800 antialiased overflow-x-hidden selection:bg-brand-500/20 selection:text-brand-900;
   }
   img,
   video {
@@ -15,10 +17,11 @@
   }
   h1,
   h2,
-  h3 {
+  h3,
+  h4 {
     @apply font-bold tracking-tight text-slate-900;
   }
-  /* Foco visible consistente para navegación por teclado */
+  /* Foco visible consistente y accesible para navegación por teclado */
   :focus-visible {
     @apply outline outline-2 outline-offset-2 outline-brand-600;
   }
@@ -29,16 +32,25 @@
     @apply mx-auto w-full max-w-6xl px-4 sm:px-6;
   }
   .skip-link {
-    @apply sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:rounded-lg focus:bg-white focus:px-4 focus:py-3 focus:font-semibold focus:text-brand-700 focus:shadow-lg;
+    @apply sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:rounded-xl focus:bg-white focus:px-4 focus:py-3 focus:font-semibold focus:text-brand-700 focus:shadow-xl focus:ring-2 focus:ring-brand-500;
   }
   .card {
-    @apply rounded-2xl border border-slate-200 bg-white shadow-card;
+    @apply rounded-2xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50/30 shadow-card transition-all duration-200;
   }
+  /* Fondo Hero moderno y sofisticado (Atmósfera slate/indigo con sutil iluminación difusa) */
   .hero-bg {
-    background:
-      radial-gradient(60rem 30rem at 10% -10%, rgb(99 102 241 / 0.35), transparent 60%),
-      radial-gradient(50rem 30rem at 110% 10%, rgb(236 72 153 / 0.25), transparent 60%),
-      linear-gradient(135deg, #312e81 0%, #4338ca 50%, #6d28d9 100%);
+    background-color: #0b0f19;
+    background-image:
+      radial-gradient(circle at 50% -20%, rgba(99, 102, 241, 0.28), transparent 70%),
+      radial-gradient(circle at 100% 60%, rgba(79, 70, 229, 0.15), transparent 50%),
+      radial-gradient(circle at 0% 80%, rgba(59, 130, 246, 0.12), transparent 50%),
+      linear-gradient(180deg, #0b0f19 0%, #0f172a 100%);
+  }
+  /* Rejilla sutil para el fondo hero */
+  .hero-grid {
+    background-size: 32px 32px;
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
   }
 }
 

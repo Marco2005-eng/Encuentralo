@@ -7,6 +7,9 @@ interface AyudaContextType {
   rolInicial: RolAyuda;
   abrirAyuda: (rol?: RolAyuda) => void;
   cerrarAyuda: () => void;
+  terminosAbierto: boolean;
+  abrirTerminos: () => void;
+  cerrarTerminos: () => void;
 }
 
 const AyudaContext = createContext<AyudaContextType | undefined>(undefined);
@@ -14,6 +17,7 @@ const AyudaContext = createContext<AyudaContextType | undefined>(undefined);
 export const AyudaProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [rolInicial, setRolInicial] = useState<RolAyuda>(null);
+  const [terminosAbierto, setTerminosAbierto] = useState(false);
 
   const abrirAyuda = useCallback((rol: RolAyuda = null) => {
     setRolInicial(rol);
@@ -24,6 +28,14 @@ export const AyudaProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setModalAbierto(false);
   }, []);
 
+  const abrirTerminos = useCallback(() => {
+    setTerminosAbierto(true);
+  }, []);
+
+  const cerrarTerminos = useCallback(() => {
+    setTerminosAbierto(false);
+  }, []);
+
   return (
     <AyudaContext.Provider
       value={{
@@ -31,6 +43,9 @@ export const AyudaProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         rolInicial,
         abrirAyuda,
         cerrarAyuda,
+        terminosAbierto,
+        abrirTerminos,
+        cerrarTerminos,
       }}
     >
       {children}

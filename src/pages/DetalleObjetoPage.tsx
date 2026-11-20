@@ -200,11 +200,11 @@ export const DetalleObjetoPage: React.FC = () => {
         </div>
       )}
 
-      {/* Botón Volver */}
+      {/* Botón Volver y Acciones de Autor */}
       <div className="mb-6 flex items-center justify-between">
         <button
           onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-brand-600 transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-600 hover:text-brand-600 hover:bg-slate-100/80 px-2.5 py-1.5 rounded-xl -ml-2.5 transition-all duration-150 active:scale-95"
         >
           <ArrowLeft className="w-4 h-4" /> Volver
         </button>
@@ -212,25 +212,25 @@ export const DetalleObjetoPage: React.FC = () => {
         {puedeEditar && (
           <div className="flex gap-2">
             <Link to={`/mis-publicaciones/${objeto.id}/editar`}>
-              <Button variant="outline" size="sm" className="gap-1.5">
+              <Button variant="outline" size="sm" className="gap-1.5 shadow-2xs">
                 <Edit className="w-4 h-4" /> Editar
               </Button>
             </Link>
-            <Button variant="danger" size="sm" onClick={handleEliminar} className="gap-1.5">
+            <Button variant="danger" size="sm" onClick={handleEliminar} className="gap-1.5 shadow-2xs">
               <Trash2 className="w-4 h-4" /> Eliminar
             </Button>
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 card p-4 sm:p-6 md:p-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 card p-5 sm:p-7 md:p-8 border-slate-200/80 bg-white shadow-card">
         {/* Imagen o Placeholder: vista completa y natural integrada al contenedor */}
         <div className="flex flex-col gap-3">
-          <div className="relative w-full h-72 sm:h-80 md:h-96 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-center overflow-hidden">
+          <div className="relative w-full h-72 sm:h-80 md:h-96 rounded-2xl bg-slate-50/80 border border-slate-200/80 flex items-center justify-center overflow-hidden">
             {objeto.imagen ? (
               <>
                 <div
-                  className="absolute inset-0 bg-cover bg-center blur-2xl opacity-30 scale-125 pointer-events-none"
+                  className="absolute inset-0 bg-cover bg-center blur-2xl opacity-25 scale-125 pointer-events-none"
                   style={{ backgroundImage: `url(${objeto.imagen})` }}
                   aria-hidden="true"
                 />
@@ -246,7 +246,7 @@ export const DetalleObjetoPage: React.FC = () => {
                   <img
                     src={objeto.imagen}
                     alt={objeto.nombre}
-                    className="max-h-full max-w-full object-contain rounded-xl"
+                    className="max-h-full max-w-full object-contain rounded-xl shadow-xs"
                   />
                 </div>
                 <div
@@ -256,13 +256,13 @@ export const DetalleObjetoPage: React.FC = () => {
               </>
             ) : (
               <div className="flex flex-col items-center gap-2 text-slate-400">
-                <ImageIcon className="w-16 h-16 stroke-1" />
-                <span className="text-sm font-medium">Sin imagen adjunta</span>
+                <ImageIcon className="w-14 h-14 stroke-1" />
+                <span className="text-xs sm:text-sm font-medium">Sin imagen adjunta</span>
               </div>
             )}
           </div>
           {/* Protección de privacidad visible (IHC sección 9) */}
-          <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100">
+          <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50/80 p-3 rounded-xl border border-slate-100">
             <ShieldCheck className="w-4 h-4 text-brand-600 shrink-0" />
             <span>{PRIVACIDAD_PUBLICADOR}</span>
           </div>
@@ -273,28 +273,28 @@ export const DetalleObjetoPage: React.FC = () => {
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <Badge estado={objeto.estado} />
-              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+              <span className="px-2.5 py-1 rounded-full text-xs font-semibold tracking-tight bg-slate-100 text-slate-700 border border-slate-200/70">
                 {CATEGORIA_LABEL[objeto.categoria]}
               </span>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 leading-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">
               {objeto.nombre}
             </h1>
 
-            <div className="space-y-2 text-sm text-slate-600 border-y border-slate-100 py-4">
+            <div className="space-y-2.5 text-xs sm:text-sm text-slate-600 border-y border-slate-100 py-4">
               <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-slate-400" />
+                <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
                 <span className="font-semibold text-slate-700">Ubicación:</span>
-                <span>{objeto.ubicacion}</span>
+                <span className="text-slate-800">{objeto.ubicacion}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-slate-400" />
+                <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
                 <span className="font-semibold text-slate-700">Fecha del suceso:</span>
-                <span>{formatFecha(objeto.fecha)}</span>
+                <span className="text-slate-800">{formatFecha(objeto.fecha)}</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-slate-400">
-                <Clock className="w-3.5 h-3.5" />
+                <Clock className="w-3.5 h-3.5 shrink-0" />
                 <span>Registrado el {formatFechaHora(objeto.creadoEn)}</span>
               </div>
             </div>

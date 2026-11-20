@@ -237,13 +237,13 @@ export const ObjetoForm: React.FC<ObjetoFormProps> = ({
           </div>
         ) : (
           <div className="flex items-center justify-center w-full">
-            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-200/90 border-dashed rounded-2xl cursor-pointer bg-slate-50/70 hover:bg-slate-100/80 hover:border-slate-300 transition-all duration-150 active:scale-[0.99] group">
               <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                <Upload className="w-8 h-8 text-slate-400 mb-2" />
-                <p className="text-sm text-slate-600 font-medium">
+                <Upload className="w-7 h-7 text-slate-400 group-hover:text-brand-600 mb-2 transition-colors" />
+                <p className="text-xs sm:text-sm text-slate-600 font-medium">
                   {subiendoImagen ? 'Procesando imagen...' : 'Haz clic para seleccionar una foto'}
                 </p>
-                <p className="text-xs text-slate-400">JPG, PNG o WebP (se comprime automáticamente)</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">JPG, PNG o WebP (se comprime automáticamente)</p>
               </div>
               <input
                 type="file"

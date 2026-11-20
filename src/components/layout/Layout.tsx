@@ -2,11 +2,13 @@ import React, { useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Header } from './Header';
 import { Footer } from './Footer';
+import { MobileBottomNav } from './MobileBottomNav';
 import { useAuth } from '@/context/AuthContext';
 import { ShieldAlert, Info } from 'lucide-react';
 import { ModalSuspensionAviso } from '@/components/ui/ModalSuspensionAviso';
 import { AyudaProvider } from '@/context/AyudaContext';
 import { ModalCentroAyuda } from '@/components/ayuda/ModalCentroAyuda';
+import { ModalTerminosPrivacidad } from '@/components/legales/ModalTerminosPrivacidad';
 import { BotonFlotanteAyuda } from '@/components/ayuda/BotonFlotanteAyuda';
 import { PantallaCarga } from '@/routes/guards';
 
@@ -35,7 +37,7 @@ const LayoutContenido: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans selection:bg-brand-500 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-slate-50/80 text-slate-800 font-sans selection:bg-brand-500/20 selection:text-brand-900 pb-16 md:pb-0">
       {/* Enlace para saltar al contenido principal accesible */}
       <a href="#contenido-principal" className="skip-link">
         Saltar al contenido principal
@@ -82,6 +84,7 @@ const LayoutContenido: React.FC = () => {
 
       <ModalSuspensionAviso />
       <ModalCentroAyuda />
+      <ModalTerminosPrivacidad />
       <BotonFlotanteAyuda />
 
       <main id="contenido-principal" className="flex-1 flex flex-col focus:outline-none" tabIndex={-1}>
@@ -89,6 +92,7 @@ const LayoutContenido: React.FC = () => {
       </main>
 
       <Footer />
+      <MobileBottomNav />
     </div>
   );
 };

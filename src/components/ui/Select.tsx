@@ -18,7 +18,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div className="w-full flex flex-col gap-1.5 text-left">
         {label && (
-          <label htmlFor={selectId} className="text-sm font-semibold text-slate-700">
+          <label htmlFor={selectId} className="text-xs sm:text-sm font-semibold text-slate-700 tracking-tight">
             {label}
             {props.required && <span className="text-rose-500 ml-1" aria-hidden="true">*</span>}
           </label>
@@ -29,10 +29,10 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           aria-invalid={Boolean(error)}
           aria-describedby={error ? errorId : ayuda ? ayudaId : undefined}
           className={cn(
-            'w-full min-h-[44px] px-3.5 py-2 rounded-xl border bg-white text-slate-900 transition-colors focus:outline-none focus:ring-2 cursor-pointer',
+            'w-full min-h-[44px] px-3.5 py-2.5 rounded-xl border bg-white text-slate-900 text-sm transition-all duration-150 ease-out focus:outline-none cursor-pointer shadow-2xs',
             error
-              ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-200'
-              : 'border-slate-300 focus:border-brand-500 focus:ring-brand-100',
+              ? 'border-rose-300 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 text-rose-950 bg-rose-50/20'
+              : 'border-slate-200/90 hover:border-slate-300 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10',
             className
           )}
           {...props}
@@ -44,12 +44,12 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           ))}
         </select>
         {ayuda && !error && (
-          <p id={ayudaId} className="text-xs text-slate-500">
+          <p id={ayudaId} className="text-xs text-slate-500 leading-normal">
             {ayuda}
           </p>
         )}
         {error && (
-          <p id={errorId} className="text-xs font-medium text-rose-600 animate-fade-up">
+          <p id={errorId} className="text-xs font-semibold text-rose-600 animate-fade-up">
             {error}
           </p>
         )}
