@@ -8,7 +8,7 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, ayuda, className, id, ...props }, ref) => {
+  ({ label, error, ayuda, className, id, 'aria-describedby': describedBy, ...props }, ref) => {
     const generatedId = useId();
     const inputId = id || generatedId;
     const errorId = `${inputId}-error`;
@@ -27,7 +27,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             ref={ref}
             aria-invalid={Boolean(error)}
-            aria-describedby={error ? errorId : ayuda ? ayudaId : undefined}
+            aria-describedby={[describedBy, ayuda ? ayudaId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined}
             className={cn(
               'w-full min-h-[44px] px-3.5 py-2 rounded-xl border bg-white text-slate-900 transition-colors placeholder:text-slate-400 focus:outline-none focus:ring-2',
               error
@@ -38,13 +38,13 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             {...props}
           />
         </div>
-        {ayuda && !error && (
-          <p id={ayudaId} className="text-xs text-slate-500">
+        {ayuda && (
+          <p id={ayudaId} className="text-sm text-slate-500">
             {ayuda}
           </p>
         )}
         {error && (
-          <p id={errorId} className="text-xs font-medium text-rose-600 animate-fade-up">
+          <p role="alert" id={errorId} className="text-sm font-medium text-rose-600 animate-fade-up">
             {error}
           </p>
         )}

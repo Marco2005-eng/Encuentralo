@@ -63,7 +63,7 @@ export const InicioPage: React.FC = () => {
 
           {/* Buscador Destacado */}
           <form aria-busy={buscando} onSubmit={handleBuscar} className="w-full max-w-xl flex gap-2 p-2 rounded-xl bg-white border border-slate-300 shadow-sm focus-within:ring-2 focus-within:ring-brand-600 focus-within:ring-offset-2 mb-6">
-            <div className="relative flex-1 flex items-center">
+            <div className="relative min-w-0 flex-1 flex items-center">
               <Search className="w-5 h-5 text-slate-400 absolute left-3.5" />
               <input
                 type="search"

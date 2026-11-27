@@ -8,7 +8,7 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
 }
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ label, error, ayuda, className, id, rows = 3, ...props }, ref) => {
+  ({ label, error, ayuda, className, id, rows = 3, 'aria-describedby': describedBy, ...props }, ref) => {
     const generatedId = useId();
     const textareaId = id || generatedId;
     const errorId = `${textareaId}-error`;
@@ -27,7 +27,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           ref={ref}
           rows={rows}
           aria-invalid={Boolean(error)}
-          aria-describedby={error ? errorId : ayuda ? ayudaId : undefined}
+          aria-describedby={[describedBy, ayuda ? ayudaId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined}
           className={cn(
             'w-full px-3.5 py-2.5 rounded-xl border bg-white text-slate-900 transition-colors placeholder:text-slate-400 focus:outline-none focus:ring-2 resize-y',
             error
@@ -37,13 +37,13 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           )}
           {...props}
         />
-        {ayuda && !error && (
-          <p id={ayudaId} className="text-xs text-slate-500">
+        {ayuda && (
+          <p id={ayudaId} className="text-sm text-slate-500">
             {ayuda}
           </p>
         )}
         {error && (
-          <p id={errorId} className="text-xs font-medium text-rose-600 animate-fade-up">
+          <p role="alert" id={errorId} className="text-sm font-medium text-rose-600 animate-fade-up">
             {error}
           </p>
         )}

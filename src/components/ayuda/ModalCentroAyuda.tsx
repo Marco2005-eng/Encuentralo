@@ -5,6 +5,7 @@ import { useAyuda } from '@/context/AyudaContext';
 import { PASOS_PERDI, PASOS_ENCONTRE, PREGUNTAS_FRECUENTES, ESTADOS_INFO } from '@/lib/ayudaContenido';
 import { Search, X, ChevronDown, ArrowRight, ArrowLeft, ShieldCheck, HelpCircle, PackageCheck, SearchX, ListChecks, BookOpen } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
+import { LectorPaso } from '@/components/ui/LectorPaso';
 import { Button } from '@/components/ui/Button';
 
 type Seccion = 'inicio' | 'perdi' | 'encontre' | 'preguntas' | 'estados';
@@ -110,6 +111,7 @@ export const ModalCentroAyuda: React.FC = () => {
             <div className="rounded-xl bg-slate-50 p-4 text-sm leading-relaxed text-slate-600"><strong className="text-slate-800">¿Ya enviaste una solicitud?</strong><p className="mt-1">Consulta su estado en Mis solicitudes. Si fue aprobada, abre el chat de entrega desde la barra superior.</p><button type="button" onClick={() => irA('/mis-solicitudes')} className="mt-2 inline-flex min-h-[44px] items-center gap-2 font-semibold text-brand-700 hover:underline">Ver mis solicitudes <ArrowRight className="h-4 w-4" aria-hidden="true" /></button></div>
           </> : esGuia ? <>
             <div><h3 className="text-xl font-bold">{seccion === 'perdi' ? 'Cómo recuperar tu objeto' : 'Cómo devolver un objeto'}</h3><p className="mt-2 text-sm text-slate-600">Elige un paso para consultarlo o avanza con Siguiente.</p></div>
+            <LectorPaso key={`${modalAbierto}-${seccion}-${pasoActual}`} texto={`Paso ${paso.numero}. ${paso.titulo}. ${paso.descripcion} ${paso.consejo || ''}`} />
             <div role="group" aria-label="Pasos de la guía" className="grid grid-cols-3 gap-2">{pasos.map((p, index) => <button key={p.numero} type="button" onClick={() => setPasoActual(index)} aria-current={pasoActual === index ? 'step' : undefined} className={'min-h-[44px] rounded-lg border px-3 py-2 text-sm font-semibold ' + (pasoActual === index ? 'border-brand-700 bg-brand-700 text-white' : 'border-slate-200 text-slate-600 hover:bg-slate-50')}>Paso {p.numero}</button>)}</div>
             <div aria-live="polite" aria-atomic="true" className="rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
               <p className="text-[13px] font-semibold text-brand-700">Paso {paso.numero} de {pasos.length}</p><h4 className="mt-2 text-lg font-bold text-slate-900">{paso.titulo}</h4><p className="mt-4 text-sm leading-7 text-slate-700">{paso.descripcion}</p>

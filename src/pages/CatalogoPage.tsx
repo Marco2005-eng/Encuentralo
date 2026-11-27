@@ -6,7 +6,7 @@ import { CATEGORIAS, ESTADO_OBJETO_LABEL } from '@/lib/textos';
 import { ObjetoCard } from '@/components/objetos/ObjetoCard';
 import { CardSkeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { Button } from '@/components/ui/Button';
+
 import { Search, Filter, X, PlusCircle, LoaderCircle } from 'lucide-react';
 
 export const CatalogoPage: React.FC = () => {
@@ -87,12 +87,7 @@ export const CatalogoPage: React.FC = () => {
             Explora las pertenencias reportadas en el campus
           </p>
         </div>
-        <Link to="/objetos/nuevo">
-          <Button variant="primary" className="shadow-sm gap-2">
-            <PlusCircle className="w-4 h-4" />
-            Publicar reporte
-          </Button>
-        </Link>
+
       </div>
 
       {/* Barra de Filtros y Buscador */}
@@ -169,7 +164,7 @@ export const CatalogoPage: React.FC = () => {
                     setTextoBusqueda('');
                     actualizarFiltro('q', '');
                   }}
-                  className="hover:text-brand-900"
+                  aria-label="Quitar texto de búsqueda" className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center hover:text-brand-900"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -180,8 +175,8 @@ export const CatalogoPage: React.FC = () => {
                 Cat: {CATEGORIAS.find((c) => c.value === catParam)?.label}
                 <button
                   type="button"
-                  onClick={() => actualizarFiltro('categoria', '')}
-                  className="hover:text-slate-900"
+                  aria-label="Quitar filtro de categoría" onClick={() => actualizarFiltro('categoria', '')}
+                  className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center hover:text-slate-900"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -192,8 +187,8 @@ export const CatalogoPage: React.FC = () => {
                 Estado: {ESTADO_OBJETO_LABEL[estParam]}
                 <button
                   type="button"
-                  onClick={() => actualizarFiltro('estado', '')}
-                  className="hover:text-slate-900"
+                  aria-label="Quitar filtro de estado" onClick={() => actualizarFiltro('estado', '')}
+                  className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center hover:text-slate-900"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -210,6 +205,9 @@ export const CatalogoPage: React.FC = () => {
         )}
       </div>
 
+      <p role="status" aria-live="polite" aria-atomic="true" className="mb-4 text-sm text-slate-700">
+        {cargando ? 'Buscando objetos...' : `${objetos.length} ${objetos.length === 1 ? 'objeto encontrado' : 'objetos encontrados'}.`}
+      </p>
       {/* Lista de Resultados */}
       <div aria-busy={cargando}>
       {cargando ? (
