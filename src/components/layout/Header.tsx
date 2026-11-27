@@ -176,7 +176,7 @@ export const Header: React.FC = () => {
     }`;
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
+    <header className={`sticky top-0 z-40 w-full border-b border-slate-200/80 bg-white/95 backdrop-blur-md ${!usuario ? 'guest-header' : ''}`}>
       <div className="container-app flex h-16 items-center justify-between gap-2 sm:gap-4">
         {/* Identidad y Navegación izquierda */}
         <div className="flex items-center gap-3 lg:gap-5 shrink-0">
@@ -192,6 +192,7 @@ export const Header: React.FC = () => {
 
           {/* Enlaces principales de exploración */}
           <nav className="hidden md:flex items-center gap-1" aria-label="Navegación principal">
+            {!usuario && <NavLink to="/" end className={navLinkClass}>Inicio</NavLink>}
             <NavLink to="/objetos" className={navLinkClass}>
               Catálogo
             </NavLink>
@@ -487,23 +488,19 @@ export const Header: React.FC = () => {
               </div>
             </>
           ) : (
-            <div className="flex items-center gap-2">
-              <Link to="/iniciar-sesion">
-                <Button variant="ghost" size="sm">
-                  Iniciar sesión
-                </Button>
-              </Link>
-              <Link to="/registro">
-                <Button variant="primary" size="sm">
-                  Registrarse
-                </Button>
-              </Link>
+            <div className="guest-account-actions">
+              <button type="button" onClick={() => abrirAyuda()} className="guest-help"><HelpCircle className="h-4 w-4" aria-hidden="true" />Cómo funciona</button>
+              <div className="guest-auth-links" role="group" aria-label="Acceso a tu cuenta">
+                <Link to="/iniciar-sesion" className="guest-signin">Iniciar sesión</Link>
+                <Link to="/registro" className="guest-register">Crear cuenta</Link>
+              </div>
             </div>
           )}
         </div>
 
         {/* Mobile menu toggle */}
         <div className="flex items-center gap-2 md:hidden">
+          {!usuario && <Link to="/iniciar-sesion" className="guest-mobile-signin">Ingresar</Link>}
           {usuario && (
             <>
               <button

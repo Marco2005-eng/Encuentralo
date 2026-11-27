@@ -52,3 +52,41 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Visitantes: explorar a la izquierda y acceso a la cuenta agrupado a la derecha. */
+.guest-header > .container-app { min-height: 76px; height: auto; padding-block: .625rem; }
+.guest-account-actions, .guest-auth-links { display: flex; align-items: center; gap: .75rem; }
+.guest-auth-links { border-left: 1px solid #e2e8f0; padding-left: 1rem; }
+.guest-help, .guest-signin, .guest-register, .guest-mobile-signin {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  min-height: 44px; padding: .625rem 1rem; border-radius: 10px;
+  font-size: .875rem; line-height: 1.4; font-weight: 600; white-space: nowrap;
+}
+.guest-help { color: #64748b; padding-inline: .5rem; font-weight: 500; }
+.guest-signin { color: #3730a3; border: 1px solid #c7d2fe; background: white; }
+.guest-register, .guest-mobile-signin { color: white; background: #4f46e5; }
+.guest-signin:hover { background: #eef2ff; }
+.guest-register:hover, .guest-mobile-signin:hover { background: #4338ca; }
+.guest-help:hover { color: #3730a3; background: #f8fafc; }
+@media (min-width: 768px) and (max-width: 1023px) {
+  .guest-header > .container-app { flex-wrap: wrap; gap: .5rem; }
+  .guest-account-actions { gap: .5rem; }
+  .guest-help { display: none; }
+  .guest-auth-links { gap: .5rem; padding-left: .5rem; }
+}
+@media (max-width: 767px) {
+  .guest-header > .container-app { min-height: 68px; padding-inline: .75rem; gap: .375rem; }
+  .guest-header a.text-xl { font-size: 1rem; gap: .375rem; }
+  .guest-mobile-signin { padding-inline: .75rem; font-size: .8125rem; }
+}
+
+/* Cabecera de visitantes centrada y con separación equilibrada. */
+@media (min-width: 768px) {
+  .guest-header > .container-app {
+    max-width: 1050px; justify-content: center; gap: 2rem;
+  }
+  .guest-header > .container-app > div:first-child { gap: 1.25rem; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .guest-header > .container-app { gap: 1rem; }
+}
