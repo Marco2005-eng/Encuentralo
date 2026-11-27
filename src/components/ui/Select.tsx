@@ -9,7 +9,7 @@ export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElemen
 }
 
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, ayuda, options, className, id, ...props }, ref) => {
+  ({ label, error, ayuda, options, className, id, 'aria-describedby': describedBy, ...props }, ref) => {
     const generatedId = useId();
     const selectId = id || generatedId;
     const errorId = `${selectId}-error`;
@@ -27,7 +27,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           id={selectId}
           ref={ref}
           aria-invalid={Boolean(error)}
-          aria-describedby={error ? errorId : ayuda ? ayudaId : undefined}
+          aria-describedby={[describedBy, ayuda ? ayudaId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined}
           className={cn(
             'w-full min-h-[44px] px-3.5 py-2 rounded-xl border bg-white text-slate-900 transition-colors focus:outline-none focus:ring-2 cursor-pointer',
             error
@@ -43,13 +43,13 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             </option>
           ))}
         </select>
-        {ayuda && !error && (
-          <p id={ayudaId} className="text-xs text-slate-500">
+        {ayuda && (
+          <p id={ayudaId} className="text-sm text-slate-500">
             {ayuda}
           </p>
         )}
         {error && (
-          <p id={errorId} className="text-xs font-medium text-rose-600 animate-fade-up">
+          <p role="alert" id={errorId} className="text-sm font-medium text-rose-600 animate-fade-up">
             {error}
           </p>
         )}

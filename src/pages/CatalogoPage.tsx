@@ -6,8 +6,8 @@ import { CATEGORIAS, ESTADO_OBJETO_LABEL } from '@/lib/textos';
 import { ObjetoCard } from '@/components/objetos/ObjetoCard';
 import { CardSkeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { Button } from '@/components/ui/Button';
-import { Search, Filter, X, PlusCircle } from 'lucide-react';
+
+import { Search, Filter, X, PlusCircle, LoaderCircle } from 'lucide-react';
 
 export const CatalogoPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -87,12 +87,7 @@ export const CatalogoPage: React.FC = () => {
             Explora las pertenencias reportadas en el campus
           </p>
         </div>
-        <Link to="/objetos/nuevo">
-          <Button variant="primary" className="shadow-sm gap-2">
-            <PlusCircle className="w-4 h-4" />
-            Publicar reporte
-          </Button>
-        </Link>
+
       </div>
 
       {/* Barra de Filtros y Buscador */}
@@ -100,9 +95,11 @@ export const CatalogoPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Input Buscador */}
           <div className="relative lg:col-span-2">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+            {cargando ? <LoaderCircle className="w-4 h-4 text-brand-700 absolute left-3 top-3.5 motion-safe:animate-spin" aria-hidden="true" /> : <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" aria-hidden="true" />}
             <input
               type="text"
+              aria-label="Buscar por nombre o descripción"
+              aria-busy={cargando}
               placeholder="Buscar por nombre o descripción..."
               value={textoBusqueda}
               onChange={(e) => setTextoBusqueda(e.target.value)}
@@ -167,7 +164,7 @@ export const CatalogoPage: React.FC = () => {
                     setTextoBusqueda('');
                     actualizarFiltro('q', '');
                   }}
-                  className="hover:text-brand-900"
+                  aria-label="Quitar texto de búsqueda" className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center hover:text-brand-900"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -178,8 +175,8 @@ export const CatalogoPage: React.FC = () => {
                 Cat: {CATEGORIAS.find((c) => c.value === catParam)?.label}
                 <button
                   type="button"
-                  onClick={() => actualizarFiltro('categoria', '')}
-                  className="hover:text-slate-900"
+                  aria-label="Quitar filtro de categoría" onClick={() => actualizarFiltro('categoria', '')}
+                  className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center hover:text-slate-900"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -190,8 +187,8 @@ export const CatalogoPage: React.FC = () => {
                 Estado: {ESTADO_OBJETO_LABEL[estParam]}
                 <button
                   type="button"
-                  onClick={() => actualizarFiltro('estado', '')}
-                  className="hover:text-slate-900"
+                  aria-label="Quitar filtro de estado" onClick={() => actualizarFiltro('estado', '')}
+                  className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center hover:text-slate-900"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -208,7 +205,11 @@ export const CatalogoPage: React.FC = () => {
         )}
       </div>
 
+      <p role="status" aria-live="polite" aria-atomic="true" className="mb-4 text-sm text-slate-700">
+        {cargando ? 'Buscando objetos...' : `${objetos.length} ${objetos.length === 1 ? 'objeto encontrado' : 'objetos encontrados'}.`}
+      </p>
       {/* Lista de Resultados */}
+      <div aria-busy={cargando}>
       {cargando ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -216,6 +217,7 @@ export const CatalogoPage: React.FC = () => {
           ))}
         </div>
       ) : objetos.length === 0 ? (
+        <div>
         <EmptyState
           titulo="No se encontraron objetos"
           descripcion={
@@ -226,6 +228,8 @@ export const CatalogoPage: React.FC = () => {
           accionTexto={hayFiltrosActivos ? 'Limpiar filtros' : 'Reportar un objeto'}
           onAccion={hayFiltrosActivos ? limpiarFiltros : () => (window.location.href = '/objetos/nuevo')}
         />
+        {hayFiltrosActivos && <div className="flex justify-center pb-8"><Link to="/objetos/nuevo" className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-brand-200 bg-white px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50"><PlusCircle className="h-4 w-4" aria-hidden="true" /> Publicar reporte</Link></div>}
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {objetos.map((obj) => (
@@ -233,6 +237,7 @@ export const CatalogoPage: React.FC = () => {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 };

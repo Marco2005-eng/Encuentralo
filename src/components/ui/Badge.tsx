@@ -17,7 +17,7 @@ export const Badge: React.FC<BadgeProps> = ({ estado, className = '' }) => {
       bg: 'bg-rose-50',
       text: 'text-rose-800',
       border: 'border-rose-200',
-      icon: <SearchX className="w-3.5 h-3.5" aria-hidden="true" />,
+      icon: <SearchX className="lost-status-icon w-3.5 h-3.5" aria-hidden="true" />,
     },
     encontrado: {
       label: ESTADO_OBJETO_LABEL.encontrado,
@@ -67,6 +67,7 @@ export const Badge: React.FC<BadgeProps> = ({ estado, className = '' }) => {
 
   return (
     <span
+      data-estado={estado}
       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${config.bg} ${config.text} ${config.border} ${className}`}
     >
       {config.icon}

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -34,7 +35,7 @@ export const ObjetoForm: React.FC<ObjetoFormProps> = ({
     handleSubmit,
     setValue,
     watch,
-    formState: { errors, isSubmitting, isDirty },
+    formState: { errors, isSubmitting, isDirty, submitCount },
   } = useForm<ObjetoValues>({
     resolver: zodResolver(objetoSchema),
     defaultValues: {
@@ -84,15 +85,24 @@ export const ObjetoForm: React.FC<ObjetoFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit(alEnviar)} className="space-y-6">
+    <form noValidate onSubmit={handleSubmit(alEnviar)} className="space-y-6">
+      {submitCount > 0 && Object.keys(errors).length > 0 && (
+        <div role="alert" className="rounded-xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900">
+          <p className="font-bold">Revisa los campos indicados antes de publicar.</p>
+          <ul className="mt-2 list-disc pl-5">
+            {Object.entries(errors).map(([campo, error]) => <li key={campo}>{error?.message}</li>)}
+          </ul>
+        </div>
+      )}
       {/* Aviso de Privacidad Requerido por IHC */}
-      <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-900 text-sm">
-        <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+      <div className="flex items-start gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-sm">
+        <ShieldAlert className="w-5 h-5 text-brand-700 shrink-0 mt-0.5" />
         <div>
-          <p className="font-bold">Aviso de privacidad y protección de datos</p>
-          <p className="text-xs text-amber-800 mt-0.5">
-            {PRIVACIDAD_PUBLICADOR}. Por favor, no incluyas datos personales sensibles como números de teléfono, DNI o direcciones en el título o descripción.
+          <p className="font-bold">Antes de publicar</p>
+          <p className="text-sm text-slate-600 mt-1">
+            {PRIVACIDAD_PUBLICADOR}. No incluyas teléfonos, correos, DNI ni direcciones particulares en el título, descripción o fotografías.
           </p>
+          <Link to="/privacidad" className="inline-flex min-h-[44px] items-center text-sm font-semibold text-brand-700 underline underline-offset-4">Consultar privacidad</Link>
         </div>
       </div>
 
@@ -243,19 +253,21 @@ export const ObjetoForm: React.FC<ObjetoFormProps> = ({
                 <p className="text-sm text-slate-600 font-medium">
                   {subiendoImagen ? 'Procesando imagen...' : 'Haz clic para seleccionar una foto'}
                 </p>
-                <p className="text-xs text-slate-400">JPG, PNG o WebP (se comprime automáticamente)</p>
+                <p className="text-sm text-slate-600">JPG, PNG o WebP (se comprime automáticamente)</p>
               </div>
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
-                className="hidden"
+                className="sr-only"
+                aria-label="Seleccionar fotografía del objeto"
+                aria-describedby={errorImagen ? "error-fotografia" : undefined}
                 onChange={handleArchivoImagen}
                 disabled={subiendoImagen}
               />
             </label>
           </div>
         )}
-        {errorImagen && <p className="text-xs font-medium text-rose-600">{errorImagen}</p>}
+        {errorImagen && <p id="error-fotografia" role="alert" className="text-sm font-medium text-rose-600">{errorImagen}</p>}
       </div>
 
       {/* Botones de acción - Cancelar a la izquierda, Acción principal a la derecha (IHC sección 9) */}

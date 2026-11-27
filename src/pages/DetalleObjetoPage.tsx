@@ -416,7 +416,7 @@ export const DetalleObjetoPage: React.FC = () => {
             }
             required
             error={errors.pruebaPertenencia?.message}
-            ayuda="Mínimo 20 caracteres. Sé lo más preciso posible."
+            ayuda="Mínimo 20 caracteres. La evidencia se utiliza en la revisión de tu solicitud por el responsable de la publicación y la administración. No incluyas documentos completos ni datos sensibles."
             {...register('pruebaPertenencia')}
           />
 
