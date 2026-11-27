@@ -4,15 +4,19 @@ import { AuthProvider } from '@/context/AuthContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { ChatProvider } from '@/context/ChatContext';
 
+import { AccesibilidadProvider } from '@/context/AccesibilidadContext';
+
 function App() {
   return (
+    <AccesibilidadProvider>
     <AuthProvider>
-      <ChatProvider>
-        <ToastProvider>
+      <ToastProvider>
+        <ChatProvider>
           <RouterProvider router={router} />
-        </ToastProvider>
-      </ChatProvider>
+        </ChatProvider>
+      </ToastProvider>
     </AuthProvider>
+    </AccesibilidadProvider>
   );
 }
 

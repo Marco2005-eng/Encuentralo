@@ -3,6 +3,7 @@ import { services } from '@/services';
 import type { MensajeEntrega } from '@/types/models';
 import { Button } from '@/components/ui/Button';
 import { Send, MapPin, Building, ShieldCheck } from 'lucide-react';
+import { useToast } from '@/context/ToastContext';
 import { formatFechaHora } from '@/lib/fechas';
 
 interface ChatEntregaModalProps {
@@ -18,6 +19,7 @@ export const ChatEntrega: React.FC<ChatEntregaModalProps> = ({
   usuarioActualId,
   sinBordes = false,
 }) => {
+  const { mostrarToast } = useToast();
   const [mensajes, setMensajes] = useState<MensajeEntrega[]>([]);
   const [nuevoMensaje, setNuevoMensaje] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -39,8 +41,8 @@ export const ChatEntrega: React.FC<ChatEntregaModalProps> = ({
   }, [solicitudId]);
 
   useEffect(() => {
-    finChatRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [mensajes]);
+    finChatRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' });
+  }, [mensajes.length]);
 
   const handleEnviar = async (e?: React.FormEvent, textoRapido?: string) => {
     if (e) e.preventDefault();
@@ -57,7 +59,7 @@ export const ChatEntrega: React.FC<ChatEntregaModalProps> = ({
       setMensajes((prev) => [...prev, creado]);
       if (!textoRapido) setNuevoMensaje('');
     } catch {
-      // Error al enviar
+      mostrarToast('No se pudo enviar el mensaje. Tu texto sigue disponible; vuelve a intentarlo.', 'error');
     } finally {
       setEnviando(false);
     }
@@ -107,6 +109,7 @@ export const ChatEntrega: React.FC<ChatEntregaModalProps> = ({
 
       {/* Lista de Mensajes con textura de fondo de alto contraste figura-fondo (IHC) */}
       <div
+        role="log" aria-label="Mensajes de coordinación de entrega" aria-live="polite" aria-relevant="additions" aria-atomic="false"
         className="flex-1 p-4 overflow-y-auto space-y-3 bg-[#e8ecf2]"
         style={{
           backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)',
@@ -167,10 +170,11 @@ export const ChatEntrega: React.FC<ChatEntregaModalProps> = ({
       <form onSubmit={(e) => handleEnviar(e)} className="p-3 bg-white border-t border-slate-200 flex gap-2 shadow-sm">
         <input
           type="text"
+          aria-label="Mensaje de coordinación"
           placeholder="Escribe un mensaje de coordinación..."
           value={nuevoMensaje}
           onChange={(e) => setNuevoMensaje(e.target.value)}
-          className="flex-1 px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-slate-50/70 focus:bg-white text-slate-900 placeholder:text-slate-400 font-medium"
+          className="min-w-0 flex-1 px-3.5 py-2.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-slate-50/70 focus:bg-white text-slate-900 placeholder:text-slate-400 font-medium"
         />
         <Button
           type="submit"

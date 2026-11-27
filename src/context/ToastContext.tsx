@@ -22,9 +22,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const id = crypto.randomUUID();
     setToasts((prev) => [...prev, { id, mensaje, tipo }]);
 
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
+    // Los avisos permanecen hasta que la persona los cierre, sin límite de lectura.
   }, []);
 
   const cerrarToast = (id: string) => {
@@ -35,8 +33,9 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     <ToastContext.Provider value={{ mostrarToast }}>
       {children}
       <div
-        className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"
-        aria-live="polite"
+        className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-[calc(100%-2rem)] max-h-[50dvh] overflow-y-auto pointer-events-none"
+        aria-label="Avisos"
+        role="region"
       >
         {toasts.map((t) => {
           const config = {
@@ -58,14 +57,14 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             <div
               key={t.id}
               className={`pointer-events-auto flex items-start gap-3 p-4 rounded-xl border shadow-lg transition-all animate-fade-up ${config.bg}`}
-              role="status"
+              role={t.tipo === 'error' ? 'alert' : 'status'}
             >
               {config.icon}
               <p className="text-sm font-medium flex-1">{t.mensaje}</p>
               <button
                 type="button"
                 onClick={() => cerrarToast(t.id)}
-                className="text-slate-400 hover:text-slate-700 p-1 -mr-1 -mt-1 rounded focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="text-slate-400 hover:text-slate-700 min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-brand-500"
                 aria-label="Cerrar notificación"
               >
                 <X className="w-4 h-4" />

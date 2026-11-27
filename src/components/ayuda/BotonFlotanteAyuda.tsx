@@ -43,7 +43,7 @@ export const BotonFlotanteAyuda: React.FC = () => {
   return (
     <aside
       aria-label="Botón de ayuda rápida"
-      className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-3.5 sm:bottom-6 sm:right-6 z-40 print:hidden pointer-events-auto"
+      className="pointer-events-auto"
     >
       <button
         type="button"
@@ -60,9 +60,10 @@ export const BotonFlotanteAyuda: React.FC = () => {
       >
         <HelpCircle className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 transition-transform group-hover:scale-110" />
 
+        <span className="support-help-mobile-label">Ayuda</span>
         {/* Etiqueta visible solo en primera visita o en hover/focus */}
         {mostrarTexto && (
-          <span className="text-xs font-bold tracking-tight whitespace-nowrap animate-fade-in pr-0.5">
+          <span className="support-help-desktop-label text-xs font-bold tracking-tight whitespace-nowrap animate-fade-in pr-0.5">
             ¿Dudas o eres nuevo?
           </span>
         )}
